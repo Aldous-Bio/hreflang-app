@@ -3,6 +3,7 @@ import { handleResourceEvent } from "../services/matchingEngine.server";
 
 export const action = async ({ request }) => {
   const { shop, topic, payload, admin } = await authenticate.webhook(request);
+  console.log(`[webhooks.products] topic=${topic} shop=${shop} admin=${admin ? "yes" : "no"} id=${payload?.id}`);
 
   const action =
     topic === "PRODUCTS_CREATE" ? "create" : topic === "PRODUCTS_DELETE" ? "delete" : "update";

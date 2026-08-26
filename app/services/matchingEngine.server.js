@@ -181,7 +181,11 @@ export async function attachItemToGroup(itemId, targetGroupId, { criteria, confi
 
 export async function handleResourceEvent({ resourceType, action, shopDomain, admin, numericId }) {
   const store = getStoreByShopDomain(shopDomain);
-  if (!store) return;
+  if (!store) {
+    console.log(`[matchingEngine] shop ${shopDomain} not in STORE_MAP, ignoring ${resourceType} ${action} ${numericId}`);
+    return;
+  }
+  console.log(`[matchingEngine] handling ${resourceType} ${action} ${numericId} for store ${store.storeId}`);
 
   const gid = buildResourceGid(resourceType, numericId);
 

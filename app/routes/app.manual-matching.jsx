@@ -13,9 +13,9 @@ export const loader = async ({ request }) => {
     ? await db.hreflangItem.findMany({
         where: {
           OR: [
-            { title: { contains: q, mode: "insensitive" } },
-            { handle: { contains: q, mode: "insensitive" } },
-            { sku: { contains: q, mode: "insensitive" } },
+            { title: { contains: q } },
+            { handle: { contains: q } },
+            { sku: { contains: q } },
           ],
         },
         include: { group: true },
