@@ -11,7 +11,7 @@ Shopify app privada que gestiona automáticamente las etiquetas **hreflang** SEO
 
 ## Qué problema resuelve
 
-Antes, para que un producto (o colección, página o artículo de blog) tuviera el hreflang correcto había que:
+Antes, para que un producto o colección tuviera el hreflang correcto había que:
 
 1. Crear el mismo contenido en las 4 tiendas.
 2. Asignar **manualmente** el mismo valor en el metafield `custom.href_lang_id` a las 4 versiones.
@@ -21,7 +21,9 @@ Esta app elimina el paso manual: escucha los webhooks de las 4 tiendas en tiempo
 
 ## Cómo funciona
 
-Cada vez que se crea, actualiza o borra un producto, colección, página o artículo en cualquiera de las 4 tiendas, la app:
+**Solo cubre productos y colecciones.** Shopify no ofrece webhooks de creación/actualización/borrado para páginas ni artículos de blog desde que migró esos recursos a los tipos GraphQL `Page`/`Article` (API 2024-10) — los topics clásicos `pages/*` y `articles/*` ya no existen, así que no hay forma de enterarse en tiempo real de cambios en ese contenido. Páginas y artículos quedan fuera del matching automático hasta que se implemente algún tipo de sincronización manual/periódica (fuera del alcance de esta versión).
+
+Cada vez que se crea, actualiza o borra un producto o colección en cualquiera de las 4 tiendas, la app:
 
 1. **Registra el recurso** en su base de datos (tabla `HreflangItem`), asociado a un "grupo" hreflang (`HreflangGroup`).
 2. **Busca una pareja** en las otras tiendas usando estos criterios, por orden de prioridad:
@@ -52,7 +54,7 @@ Construida sobre el template oficial de Shopify (`npm init @shopify/app@latest`)
 - **Base de datos**: PostgreSQL vía Prisma (`prisma/schema.prisma`), pensado para Supabase u otro proveedor Postgres gestionado.
 - **Motor de matching**: `app/services/matchingEngine.server.js`.
 - **Escritura de metafields**: `app/services/shopifyResource.server.js`.
-- **Webhooks**: `app/routes/webhooks.{products,collections,pages,articles}.jsx`, declarados en `shopify.app.toml`.
+- **Webhooks**: `app/routes/webhooks.{products,collections}.jsx`, declarados en `shopify.app.toml`.
 - **Configuración de tiendas**: variable de entorno `STORE_MAP` (ver `.env.example`), leída por `app/config/stores.server.js`.
 
 ## Puesta en marcha

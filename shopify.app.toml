@@ -52,17 +52,14 @@ api_version = "2026-10"
   uri = "/webhooks/collections"
   topics = [ "collections/create", "collections/update", "collections/delete" ]
 
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/pages"
-  topics = [ "pages/create", "pages/update", "pages/delete" ]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/articles"
-  topics = [ "articles/create", "articles/update", "articles/delete" ]
+  # Shopify no ofrece webhooks de create/update/delete para Page ni Article
+  # (los topics REST clásicos pages/* y articles/* no tienen equivalente desde
+  # que se migraron a los tipos GraphQL Page/Article en la API 2024-10). El
+  # matching automático en tiempo real solo cubre productos y colecciones;
+  # páginas y artículos necesitarían una sincronización manual/periódica aparte.
 
 [auth]
 redirect_urls = [ "https://hreflang.apps.aldous-server.com/api/auth" ]
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
