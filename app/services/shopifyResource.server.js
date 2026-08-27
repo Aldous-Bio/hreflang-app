@@ -77,6 +77,7 @@ const RESOURCE_DETAIL_QUERIES = {
         id
         handle
         title
+        status
         variants(first: 1) { nodes { sku } }
         hreflangId: metafield(namespace: "custom", key: "${HREFLANG_ID_KEY}") { value }
       }
@@ -138,6 +139,7 @@ export async function fetchResourceDetails(admin, resourceType, numericId) {
     gid: node.id,
     handle: node.handle,
     title: node.title,
+    status: node.status ?? null,
     sku: node.variants?.nodes?.[0]?.sku ?? null,
     existingHreflangId: node.hreflangId?.value ?? null,
     path,

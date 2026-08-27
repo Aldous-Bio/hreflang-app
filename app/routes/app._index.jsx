@@ -1,4 +1,4 @@
-import { useFetcher, useLoaderData } from "react-router";
+import { Form, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { getAllStores } from "../config/stores.server";
@@ -25,20 +25,52 @@ function adminEditUrl(item, resourceType) {
   return `https://${item.shopDomain}/admin/${path}/${numericId}`;
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
+
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
-  const [pendingSiblings, partial, complete, recentGroups, matchingEnabled] = await Promise.all([
+  const url = new URL(request.url);
+  const q = url.searchParams.get("q")?.trim() ?? "";
+  const pageSize = PAGE_SIZE_OPTIONS.includes(Number(url.searchParams.get("pageSize")))
+    ? Number(url.searchParams.get("pageSize"))
+    : DEFAULT_PAGE_SIZE;
+  const requestedPage = Number(url.searchParams.get("page")) || 1;
+
+  const where = q
+    ? {
+        OR: [
+          { hreflangId: { contains: q } },
+          {
+            items: {
+              some: {
+                OR: [{ title: { contains: q } }, { handle: { contains: q } }, { sku: { contains: q } }],
+              },
+            },
+          },
+        ],
+      }
+    : {};
+
+  const [pendingSiblings, partial, complete, matchingEnabled, totalCount] = await Promise.all([
     db.hreflangGroup.count({ where: { status: "pending_siblings" } }),
     db.hreflangGroup.count({ where: { status: "partial" } }),
     db.hreflangGroup.count({ where: { status: "complete" } }),
-    db.hreflangGroup.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: { items: true },
-    }),
     isMatchingEnabled(),
+    db.hreflangGroup.count({ where }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(Math.max(requestedPage, 1), totalPages);
+
+  const groups = await db.hreflangGroup.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    include: { items: true },
+  });
 
   return {
     stats: {
@@ -47,9 +79,14 @@ export const loader = async ({ request }) => {
       partial,
       complete,
     },
-    recentGroups,
+    groups,
     storeIds: getAllStores().map((store) => store.storeId),
     matchingEnabled,
+    q,
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
   };
 };
 
@@ -73,9 +110,17 @@ export const action = async ({ request }) => {
 };
 
 export default function Dashboard() {
-  const { stats, recentGroups, storeIds, matchingEnabled } = useLoaderData();
+  const { stats, groups, storeIds, matchingEnabled, q, page, pageSize, totalCount, totalPages } =
+    useLoaderData();
   const toggleFetcher = useFetcher();
   const rescanFetcher = useFetcher();
+  const [searchParams] = useSearchParams();
+
+  function pageHref(targetPage) {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", String(targetPage));
+    return `?${params.toString()}`;
+  }
 
   return (
     <s-page heading="Hreflang dashboard">
@@ -137,8 +182,31 @@ export default function Dashboard() {
       </s-section>
 
       <s-section heading="Recent groups">
-        {recentGroups.length === 0 ? (
-          <s-paragraph>No hreflang groups yet. They appear automatically as products, collections, pages, and articles are created across the 4 stores.</s-paragraph>
+        <Form method="get">
+          <s-stack direction="inline" gap="base" alignItems="end">
+            <s-text-field
+              name="q"
+              label="Buscar por título, handle, SKU o hreflang ID"
+              defaultValue={q}
+            ></s-text-field>
+            <s-select name="pageSize" label="Por página" defaultValue={String(pageSize)}>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <s-option key={size} value={String(size)}>
+                  {size}
+                </s-option>
+              ))}
+            </s-select>
+            <input type="hidden" name="page" value="1" />
+            <s-button type="submit">Buscar</s-button>
+          </s-stack>
+        </Form>
+
+        {groups.length === 0 ? (
+          <s-paragraph>
+            {q
+              ? `No hay grupos que coincidan con "${q}".`
+              : "No hreflang groups yet. They appear automatically as products, collections, pages, and articles are created across the 4 stores."}
+          </s-paragraph>
         ) : (
           <s-table>
             <s-table-header-row>
@@ -150,7 +218,7 @@ export default function Dashboard() {
               <s-table-header>Match</s-table-header>
             </s-table-header-row>
             <s-table-body>
-              {recentGroups.map((group) => (
+              {groups.map((group) => (
                 <s-table-row key={group.id}>
                   <s-table-cell>{group.hreflangId}</s-table-cell>
                   <s-table-cell>{group.items[0]?.title ?? "—"}</s-table-cell>
@@ -185,6 +253,16 @@ export default function Dashboard() {
               ))}
             </s-table-body>
           </s-table>
+        )}
+
+        {totalCount > 0 && (
+          <s-stack direction="inline" gap="base" alignItems="center">
+            <s-text tone="subdued">
+              Página {page} de {totalPages} ({totalCount} en total)
+            </s-text>
+            {page > 1 && <s-link href={pageHref(page - 1)}>Anterior</s-link>}
+            {page < totalPages && <s-link href={pageHref(page + 1)}>Siguiente</s-link>}
+          </s-stack>
         )}
       </s-section>
     </s-page>

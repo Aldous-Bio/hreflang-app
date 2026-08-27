@@ -131,6 +131,28 @@ async function recomputeGroupStatus(groupId) {
   });
 }
 
+// Quita un item de su grupo (borrado real, o producto pasado a borrador) y
+// deja el grupo consistente: lo borra si se queda vacío, o resincroniza el
+// resto de miembros si no.
+async function removeItemAndCleanupGroup(item, logAction, logDetails) {
+  await db.hreflangItem.delete({ where: { id: item.id } });
+  await logMatching(item.groupId, logAction, logDetails);
+
+  const remaining = await db.hreflangGroup.findUnique({
+    where: { id: item.groupId },
+    include: { items: true },
+  });
+  if (!remaining) return;
+
+  if (remaining.items.length === 0) {
+    await db.hreflangGroup.delete({ where: { id: remaining.id } });
+    return;
+  }
+
+  const updated = await recomputeGroupStatus(remaining.id);
+  await pushMetafieldsForGroup(updated);
+}
+
 async function pushMetafieldsForGroup(group) {
   for (const item of group.items) {
     const otherItems = group.items.filter((other) => other.id !== item.id);
@@ -201,23 +223,7 @@ export async function handleResourceEvent({ resourceType, action, shopDomain, ad
       where: { storeId_shopifyGid: { storeId: store.storeId, shopifyGid: gid } },
     });
     if (!item) return;
-
-    await db.hreflangItem.delete({ where: { id: item.id } });
-    await logMatching(item.groupId, "item_deleted", { storeId: store.storeId, gid });
-
-    const remaining = await db.hreflangGroup.findUnique({
-      where: { id: item.groupId },
-      include: { items: true },
-    });
-    if (!remaining) return;
-
-    if (remaining.items.length === 0) {
-      await db.hreflangGroup.delete({ where: { id: remaining.id } });
-      return;
-    }
-
-    const updated = await recomputeGroupStatus(remaining.id);
-    await pushMetafieldsForGroup(updated);
+    await removeItemAndCleanupGroup(item, "item_deleted", { storeId: store.storeId, gid });
     return;
   }
 
@@ -227,6 +233,19 @@ export async function handleResourceEvent({ resourceType, action, shopDomain, ad
   const existingItem = await db.hreflangItem.findUnique({
     where: { storeId_shopifyGid: { storeId: store.storeId, shopifyGid: details.gid } },
   });
+
+  // Los productos en borrador no cuentan: si ya estaba trackeado (de cuando
+  // no era borrador), se retira del grupo; si es nuevo, se ignora.
+  if (resourceType === "product" && details.status === "DRAFT") {
+    console.log(`[matchingEngine] product ${numericId} is DRAFT, skipping`);
+    if (existingItem) {
+      await removeItemAndCleanupGroup(existingItem, "item_unpublished_draft", {
+        storeId: store.storeId,
+        gid: details.gid,
+      });
+    }
+    return;
+  }
 
   const { group, matched, criteria, confidence, isNewOrphan } = await resolveGroup({
     resourceType,
