@@ -44,25 +44,29 @@ export const loader = async ({ request }) => {
 
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
+  const type = url.searchParams.get("type")?.trim() ?? "";
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(url.searchParams.get("pageSize")))
     ? Number(url.searchParams.get("pageSize"))
     : DEFAULT_PAGE_SIZE;
   const requestedPage = Number(url.searchParams.get("page")) || 1;
 
-  const where = q
-    ? {
-        OR: [
-          { hreflangId: { contains: q } },
-          {
-            items: {
-              some: {
-                OR: [{ title: { contains: q } }, { handle: { contains: q } }, { sku: { contains: q } }],
+  const where = {
+    ...(type ? { resourceType: type } : {}),
+    ...(q
+      ? {
+          OR: [
+            { hreflangId: { contains: q } },
+            {
+              items: {
+                some: {
+                  OR: [{ title: { contains: q } }, { handle: { contains: q } }, { sku: { contains: q } }],
+                },
               },
             },
-          },
-        ],
-      }
-    : {};
+          ],
+        }
+      : {}),
+  };
 
   const [pendingSiblings, partial, complete, matchingEnabled, totalCount] = await Promise.all([
     db.hreflangGroup.count({ where: { status: "pending_siblings" } }),
@@ -94,6 +98,7 @@ export const loader = async ({ request }) => {
     storeIds: getAllStores().map((store) => store.storeId),
     matchingEnabled,
     q,
+    type,
     page,
     pageSize,
     totalCount,
@@ -126,7 +131,7 @@ export const action = async ({ request }) => {
 };
 
 export default function Dashboard() {
-  const { stats, groups, storeIds, matchingEnabled, q, page, pageSize, totalCount, totalPages } =
+  const { stats, groups, storeIds, matchingEnabled, q, type, page, pageSize, totalCount, totalPages } =
     useLoaderData();
   const toggleFetcher = useFetcher();
   const rescanFetcher = useFetcher();
@@ -227,12 +232,17 @@ export default function Dashboard() {
 
       <s-section heading="Recent groups">
         <Form method="get">
-          <s-grid gridTemplateColumns="1fr 140px 110px" gap="base" alignItems="end" paddingBlockEnd="base">
+          <s-grid gridTemplateColumns="1fr 160px 140px 110px" gap="base" alignItems="end" paddingBlockEnd="base">
             <s-text-field
               name="q"
               label="Buscar por título, handle, SKU o hreflang ID"
               defaultValue={q}
             ></s-text-field>
+            <s-select name="type" label="Tipo" defaultValue={type}>
+              <s-option value="">Todos</s-option>
+              <s-option value="product">product</s-option>
+              <s-option value="collection">collection</s-option>
+            </s-select>
             <s-select name="pageSize" label="Por página" defaultValue={String(pageSize)}>
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <s-option key={size} value={String(size)}>
