@@ -248,24 +248,19 @@ export default function Dashboard() {
                     <s-badge tone={STATUS_TONE[group.status]}>{group.status}</s-badge>
                   </s-table-cell>
                   <s-table-cell>
-                    {group.items.length === 0 ? (
-                      "—"
-                    ) : (
-                      <s-stack direction="inline" gap="tight">
-                        {storeIds
+                    {group.items.length === 0
+                      ? "—"
+                      : storeIds
                           .map((storeId) => group.items.find((item) => item.storeId === storeId))
                           .filter(Boolean)
-                          .map((item) => (
-                            <s-link
-                              key={item.id}
-                              href={adminEditUrl(item, group.resourceType)}
-                              target="_blank"
-                            >
-                              {item.storeId}
-                            </s-link>
+                          .map((item, index) => (
+                            <span key={item.id}>
+                              {index > 0 && ", "}
+                              <s-link href={adminEditUrl(item, group.resourceType)} target="_blank">
+                                {item.storeId}
+                              </s-link>
+                            </span>
                           ))}
-                      </s-stack>
-                    )}
                   </s-table-cell>
                   <s-table-cell>
                     {group.matchCriteria ? `${group.matchCriteria} (${group.matchConfidence}%)` : "—"}
