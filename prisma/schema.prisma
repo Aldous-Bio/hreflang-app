@@ -67,6 +67,11 @@ model HreflangItem {
   @@index([storeId, handle])
 }
 
+model AppSetting {
+  key   String @id
+  value String
+}
+
 model MatchingLog {
   id        Int            @id @default(autoincrement())
   groupId   Int?

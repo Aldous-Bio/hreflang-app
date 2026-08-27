@@ -6,6 +6,7 @@ import {
   setHreflangMetafields,
 } from "./shopifyResource.server";
 import { AUTO_MATCH_THRESHOLD, handleSimilarity } from "../utils/similarity.server";
+import { isMatchingEnabled } from "./settings.server";
 
 function statusForCount(count) {
   if (count >= totalStoreCount()) return "complete";
@@ -181,6 +182,11 @@ export async function attachItemToGroup(itemId, targetGroupId, { criteria, confi
 }
 
 export async function handleResourceEvent({ resourceType, action, shopDomain, admin, numericId }) {
+  if (!(await isMatchingEnabled())) {
+    console.log(`[matchingEngine] matching disabled, ignoring ${resourceType} ${action} ${numericId}`);
+    return;
+  }
+
   const store = getStoreByShopDomain(shopDomain);
   if (!store) {
     console.log(`[matchingEngine] shop ${shopDomain} not in STORE_MAP, ignoring ${resourceType} ${action} ${numericId}`);
@@ -264,4 +270,37 @@ export async function handleResourceEvent({ resourceType, action, shopDomain, ad
 
   const updated = await recomputeGroupStatus(group.id);
   await pushMetafieldsForGroup(updated);
+}
+
+// Re-ejecuta el matching sobre todo lo que ya está en la base de datos sin
+// completar (huérfanos/parciales). Útil tras corregir STORE_MAP o una
+// definición de metacampo — no hace falta esperar a que cada producto se
+// vuelva a editar para que dispare un webhook nuevo.
+export async function rescanAllPendingGroups() {
+  const items = await db.hreflangItem.findMany({
+    where: { group: { status: { not: "complete" } } },
+  });
+
+  let matchesMade = 0;
+  for (const item of items) {
+    const current = await db.hreflangItem.findUnique({
+      where: { id: item.id },
+      include: { group: true },
+    });
+    if (!current || current.group.status === "complete") continue;
+
+    const candidate = await findMatchCandidate(current.group.resourceType, current.storeId, {
+      sku: current.sku,
+      handle: current.handle,
+    });
+    if (!candidate) continue;
+
+    await attachItemToGroup(current.id, candidate.item.groupId, {
+      criteria: candidate.criteria,
+      confidence: candidate.confidence,
+    });
+    matchesMade++;
+  }
+
+  return matchesMade;
 }
