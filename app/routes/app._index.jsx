@@ -9,6 +9,20 @@ const STATUS_TONE = {
   pending_siblings: "critical",
 };
 
+const ADMIN_PATH_BY_RESOURCE_TYPE = {
+  product: "products",
+  collection: "collections",
+  page: "pages",
+  article: "articles",
+};
+
+function adminEditUrl(item, resourceType) {
+  const numericId = item.shopifyGid.split("/").pop();
+  const path = ADMIN_PATH_BY_RESOURCE_TYPE[resourceType];
+  if (!path) return item.url;
+  return `https://${item.shopDomain}/admin/${path}/${numericId}`;
+}
+
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
@@ -90,10 +104,24 @@ export default function Dashboard() {
                     <s-badge tone={STATUS_TONE[group.status]}>{group.status}</s-badge>
                   </s-table-cell>
                   <s-table-cell>
-                    {storeIds
-                      .map((storeId) => (group.items.some((item) => item.storeId === storeId) ? storeId : null))
-                      .filter(Boolean)
-                      .join(", ") || "—"}
+                    {group.items.length === 0 ? (
+                      "—"
+                    ) : (
+                      <s-stack direction="inline" gap="tight">
+                        {storeIds
+                          .map((storeId) => group.items.find((item) => item.storeId === storeId))
+                          .filter(Boolean)
+                          .map((item) => (
+                            <s-link
+                              key={item.id}
+                              href={adminEditUrl(item, group.resourceType)}
+                              target="_blank"
+                            >
+                              {item.storeId}
+                            </s-link>
+                          ))}
+                      </s-stack>
+                    )}
                   </s-table-cell>
                   <s-table-cell>
                     {group.matchCriteria ? `${group.matchCriteria} (${group.matchConfidence}%)` : "—"}
