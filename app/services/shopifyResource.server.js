@@ -1,6 +1,6 @@
 import { unauthenticated } from "../shopify.server";
 
-const HREFLANG_ID_KEY = "href_lang_id";
+const HREFLANG_ID_KEY = "href_lang_group_id";
 const HREFLANG_URLS_KEY = "href_lang";
 const NAMESPACE = "custom";
 

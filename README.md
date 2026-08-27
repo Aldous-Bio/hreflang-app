@@ -17,7 +17,9 @@ Antes, para que un producto o colección tuviera el hreflang correcto había que
 2. Asignar **manualmente** el mismo valor en el metafield `custom.href_lang_id` a las 4 versiones.
 3. Esperar a que un cronjob externo detectara los IDs coincidentes y rellenara `custom.href_lang` con las URLs de las otras tiendas.
 
-Esta app elimina el paso manual: escucha los webhooks de las 4 tiendas en tiempo real, busca automáticamente la "pareja" equivalente en las otras tiendas y rellena los dos metafields sin intervención humana.
+Esta app elimina el paso manual: escucha los webhooks de las 4 tiendas en tiempo real, busca automáticamente la "pareja" equivalente en las otras tiendas y rellena el hreflang sin intervención humana.
+
+**Convive con el sistema manual sin tocarlo:** la app usa un metafield propio, `custom.href_lang_group_id` (texto), completamente separado del `custom.href_lang_id` (numérico) que ya usa el sistema manual/cronjob actual. Así los dos sistemas pueden coexistir sin pisarse — no hay riesgo de que la app reescriba o interprete mal los IDs ya asignados a mano. Ambos sistemas sí comparten el metafield de salida `custom.href_lang` (la lista de URLs), que es el que realmente lee el tema para pintar las etiquetas hreflang.
 
 ## Cómo funciona
 
@@ -30,8 +32,8 @@ Cada vez que se crea, actualiza o borra un producto o colección en cualquiera d
    - **SKU idéntico** (solo productos) → confianza 95%, se enlaza automáticamente.
    - **Handle muy similar** (≥80%) → confianza 75%, se enlaza automáticamente.
    - **Handle moderadamente similar** (55–80%) → no se enlaza solo, aparece como sugerencia en la página "Pending review" para aprobación manual.
-   - Si el recurso ya tiene un `custom.href_lang_id` asignado manualmente (compatibilidad con el sistema anterior), la app respeta ese ID y añade el recurso a ese mismo grupo en vez de crear uno nuevo.
-3. **Actualiza los metafields** `custom.href_lang_id` y `custom.href_lang` en todas las tiendas del grupo, en cada tienda con las URLs de las otras.
+   - Si el recurso ya tiene un `custom.href_lang_group_id` (asignado por la propia app en una ejecución anterior), la app respeta ese ID y añade el recurso a ese mismo grupo en vez de crear uno nuevo.
+3. **Actualiza los metafields** `custom.href_lang_group_id` y `custom.href_lang` en todas las tiendas del grupo, en cada tienda con las URLs de las otras.
 4. **Registra el estado del grupo**: `pending_siblings` (huérfano, solo 1 tienda), `partial` (2–3 tiendas) o `complete` (las 4 tiendas).
 
 Como cada recurso se registra en la base de datos en el momento en que ocurre su webhook, el matching es una simple consulta local — no hace falta llamar a la API de las otras tiendas en cada evento, solo cuando toca escribir el metafield en el resultado del match.
@@ -89,7 +91,7 @@ Pulsa `P` para abrir la URL de la app e instalarla en una tienda de desarrollo. 
 
 1. Crea (o edita) dos productos con el mismo SKU en dos tiendas distintas.
 2. Revisa la tabla `HreflangItem`/`HreflangGroup` con `npx prisma studio`.
-3. Comprueba en el admin de Shopify que ambos productos tienen ya `custom.href_lang_id` y `custom.href_lang` rellenos.
+3. Comprueba en el admin de Shopify que ambos productos tienen ya `custom.href_lang_group_id` y `custom.href_lang` rellenos.
 
 ## Despliegue
 
