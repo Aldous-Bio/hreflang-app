@@ -345,3 +345,52 @@ export async function rescanAllPendingGroups() {
 
   return { matchesMade, removed };
 }
+
+// SOLO PARA PRUEBAS: agrupa por el valor del campo legado custom.href_lang_id
+// (el que se asignaba a mano en el sistema anterior) en vez de por SKU/handle.
+// Usado por app/services/legacyImport.server.js. Si el item ya pertenecía a
+// otro grupo (p. ej. un auto-match previo), ese grupo antiguo se limpia.
+export async function importLegacyGroup(hreflangId, resourceType, itemsData) {
+  const group = await findOrCreateGroupByHreflangId(hreflangId, resourceType);
+  const staleGroupIds = new Set();
+
+  for (const data of itemsData) {
+    const existing = await db.hreflangItem.findUnique({
+      where: { storeId_shopifyGid: { storeId: data.storeId, shopifyGid: data.gid } },
+    });
+    if (existing && existing.groupId !== group.id) {
+      staleGroupIds.add(existing.groupId);
+    }
+
+    await db.hreflangItem.upsert({
+      where: { storeId_shopifyGid: { storeId: data.storeId, shopifyGid: data.gid } },
+      update: { groupId: group.id, handle: data.handle, title: data.title, sku: data.sku, url: data.url },
+      create: {
+        groupId: group.id,
+        storeId: data.storeId,
+        shopDomain: data.shopDomain,
+        shopifyGid: data.gid,
+        handle: data.handle,
+        title: data.title,
+        sku: data.sku,
+        url: data.url,
+      },
+    });
+  }
+
+  await logMatching(group.id, "legacy_import", { hreflangId, resourceType, storeCount: itemsData.length });
+
+  for (const staleGroupId of staleGroupIds) {
+    const remainingCount = await db.hreflangItem.count({ where: { groupId: staleGroupId } });
+    if (remainingCount === 0) {
+      await db.hreflangGroup.delete({ where: { id: staleGroupId } });
+    } else {
+      const resynced = await recomputeGroupStatus(staleGroupId);
+      await pushMetafieldsForGroup(resynced);
+    }
+  }
+
+  const updated = await recomputeGroupStatus(group.id);
+  await pushMetafieldsForGroup(updated);
+  return updated;
+}

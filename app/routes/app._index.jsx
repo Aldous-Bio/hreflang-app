@@ -4,6 +4,7 @@ import db from "../db.server";
 import { getAllStores } from "../config/stores.server";
 import { isMatchingEnabled, setMatchingEnabled } from "../services/settings.server";
 import { rescanAllPendingGroups } from "../services/matchingEngine.server";
+import { runLegacyImport } from "../services/legacyImport.server";
 
 const STATUS_TONE = {
   complete: "success",
@@ -116,6 +117,11 @@ export const action = async ({ request }) => {
     return { rescanned: true, matchesMade, removed };
   }
 
+  if (intent === "legacyImport") {
+    const { groupsProcessed, itemsLinked } = await runLegacyImport();
+    return { legacyImported: true, groupsProcessed, itemsLinked };
+  }
+
   return null;
 };
 
@@ -124,6 +130,7 @@ export default function Dashboard() {
     useLoaderData();
   const toggleFetcher = useFetcher();
   const rescanFetcher = useFetcher();
+  const legacyImportFetcher = useFetcher();
   const [searchParams] = useSearchParams();
 
   function pageHref(targetPage) {
@@ -162,6 +169,30 @@ export default function Dashboard() {
           &ldquo;Apagar&rdquo; pausa el matching automático por webhooks (nada se crea ni se escribe, pero los
           webhooks se siguen recibiendo). &ldquo;Forzar re-scan&rdquo; busca coincidencias ahora mismo entre todo
           lo que ya está huérfano en la base de datos, sin esperar a que se vuelva a editar cada producto.
+        </s-paragraph>
+      </s-section>
+
+      <s-section heading="Herramientas de prueba (temporal)">
+        <s-stack direction="inline" gap="base" alignItems="center">
+          <legacyImportFetcher.Form method="post">
+            <input type="hidden" name="intent" value="legacyImport" />
+            <s-button type="submit" loading={legacyImportFetcher.state !== "idle"}>
+              Importar desde legado (custom.href_lang_id)
+            </s-button>
+          </legacyImportFetcher.Form>
+          {legacyImportFetcher.data?.legacyImported && (
+            <s-text>
+              {legacyImportFetcher.data.groupsProcessed} grupos procesados,{" "}
+              {legacyImportFetcher.data.itemsLinked} recursos enlazados.
+            </s-text>
+          )}
+        </s-stack>
+        <s-paragraph>
+          Recorre productos y colecciones de las 4 tiendas buscando el valor del metafield legado{" "}
+          <code>custom.href_lang_id</code> (el que se asignaba a mano en el sistema anterior) y agrupa lo que
+          comparta el mismo valor, rellenando <code>custom.href_lang_group_id</code> y{" "}
+          <code>custom.href_lang</code> a partir de esas parejas ya validadas. Puede tardar un rato según el
+          tamaño del catálogo — solo para la fase de pruebas, no forma parte del flujo automático normal.
         </s-paragraph>
       </s-section>
 
