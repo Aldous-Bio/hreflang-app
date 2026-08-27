@@ -25,6 +25,16 @@ function adminEditUrl(item, resourceType) {
   return `https://${item.shopDomain}/admin/${path}/${numericId}`;
 }
 
+const PAGE_WINDOW_SIZE = 5;
+
+function pageWindow(current, total) {
+  const half = Math.floor(PAGE_WINDOW_SIZE / 2);
+  let start = Math.max(1, current - half);
+  const end = Math.min(total, start + PAGE_WINDOW_SIZE - 1);
+  start = Math.max(1, end - PAGE_WINDOW_SIZE + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -265,12 +275,45 @@ export default function Dashboard() {
         )}
 
         {totalCount > 0 && (
-          <s-stack direction="inline" gap="base" alignItems="center">
+          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
             <s-text tone="subdued">
-              Página {page} de {totalPages} ({totalCount} en total)
+              Mostrando {(page - 1) * pageSize + 1} a {Math.min(page * pageSize, totalCount)} de {totalCount}
             </s-text>
-            {page > 1 && <s-link href={pageHref(page - 1)}>Anterior</s-link>}
-            {page < totalPages && <s-link href={pageHref(page + 1)}>Siguiente</s-link>}
+            <s-stack direction="inline" gap="tight" alignItems="center">
+              {page > 1 ? (
+                <>
+                  <s-link href={pageHref(1)}>&laquo;</s-link>
+                  <s-link href={pageHref(page - 1)}>&lsaquo;</s-link>
+                </>
+              ) : (
+                <>
+                  <s-text tone="subdued">&laquo;</s-text>
+                  <s-text tone="subdued">&lsaquo;</s-text>
+                </>
+              )}
+
+              {pageWindow(page, totalPages).map((pageNumber) =>
+                pageNumber === page ? (
+                  <s-badge key={pageNumber}>{pageNumber}</s-badge>
+                ) : (
+                  <s-link key={pageNumber} href={pageHref(pageNumber)}>
+                    {pageNumber}
+                  </s-link>
+                ),
+              )}
+
+              {page < totalPages ? (
+                <>
+                  <s-link href={pageHref(page + 1)}>&rsaquo;</s-link>
+                  <s-link href={pageHref(totalPages)}>&raquo;</s-link>
+                </>
+              ) : (
+                <>
+                  <s-text tone="subdued">&rsaquo;</s-text>
+                  <s-text tone="subdued">&raquo;</s-text>
+                </>
+              )}
+            </s-stack>
           </s-stack>
         )}
       </s-section>
