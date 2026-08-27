@@ -1,4 +1,4 @@
-import { Form, useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { Form, useFetcher, useLoaderData, useSearchParams, useSubmit } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { getAllStores } from "../config/stores.server";
@@ -115,6 +115,7 @@ export default function Dashboard() {
   const toggleFetcher = useFetcher();
   const rescanFetcher = useFetcher();
   const [searchParams] = useSearchParams();
+  const submit = useSubmit();
 
   function pageHref(targetPage) {
     const params = new URLSearchParams(searchParams);
@@ -182,23 +183,28 @@ export default function Dashboard() {
       </s-section>
 
       <s-section heading="Recent groups">
-        <Form method="get">
-          <s-stack direction="inline" gap="base" alignItems="end">
+        <Form method="get" onSubmit={(event) => event.preventDefault()}>
+          <s-grid gridTemplateColumns="85% 15%" gap="base">
             <s-text-field
               name="q"
               label="Buscar por título, handle, SKU o hreflang ID"
               defaultValue={q}
+              onChange={(event) => submit(event.currentTarget.form)}
             ></s-text-field>
-            <s-select name="pageSize" label="Por página" defaultValue={String(pageSize)}>
+            <s-select
+              name="pageSize"
+              label="Por página"
+              defaultValue={String(pageSize)}
+              onChange={(event) => submit(event.currentTarget.form)}
+            >
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <s-option key={size} value={String(size)}>
                   {size}
                 </s-option>
               ))}
             </s-select>
-            <input type="hidden" name="page" value="1" />
-            <s-button type="submit">Buscar</s-button>
-          </s-stack>
+          </s-grid>
+          <input type="hidden" name="page" value="1" />
         </Form>
 
         {groups.length === 0 ? (
