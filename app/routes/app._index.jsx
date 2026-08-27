@@ -1,4 +1,4 @@
-import { Form, useFetcher, useLoaderData, useSearchParams, useSubmit } from "react-router";
+import { Form, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { getAllStores } from "../config/stores.server";
@@ -125,7 +125,6 @@ export default function Dashboard() {
   const toggleFetcher = useFetcher();
   const rescanFetcher = useFetcher();
   const [searchParams] = useSearchParams();
-  const submit = useSubmit();
 
   function pageHref(targetPage) {
     const params = new URLSearchParams(searchParams);
@@ -154,7 +153,7 @@ export default function Dashboard() {
           </rescanFetcher.Form>
           {rescanFetcher.data?.rescanned && (
             <s-text>
-              {rescanFetcher.data.matchesMade} coincidencias nuevas, {rescanFetcher.data.removed} borradores/borrados
+              {rescanFetcher.data.matchesMade} coincidencias nuevas, {rescanFetcher.data.removed} borradores
               retirados.
             </s-text>
           )}
@@ -197,19 +196,13 @@ export default function Dashboard() {
 
       <s-section heading="Recent groups">
         <Form method="get">
-          <s-box paddingBlockEnd="base">
-          <s-grid gridTemplateColumns="1fr 140px 110px" gap="base" alignItems="end">
+          <s-grid gridTemplateColumns="1fr 140px 110px" gap="base" alignItems="end" paddingBlockEnd="base">
             <s-text-field
               name="q"
               label="Buscar por título, handle, SKU o hreflang ID"
               defaultValue={q}
             ></s-text-field>
-            <s-select
-              name="pageSize"
-              label="Por página"
-              defaultValue={String(pageSize)}
-              onChange={(event) => submit(event.currentTarget.form)}
-            >
+            <s-select name="pageSize" label="Por página" defaultValue={String(pageSize)}>
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <s-option key={size} value={String(size)}>
                   {size}
@@ -218,7 +211,6 @@ export default function Dashboard() {
             </s-select>
             <s-button type="submit">Buscar</s-button>
           </s-grid>
-          </s-box>
           <input type="hidden" name="page" value="1" />
         </Form>
 
