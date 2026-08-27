@@ -198,12 +198,11 @@ export default function Dashboard() {
       <s-section heading="Recent groups">
         <Form method="get">
           <s-box paddingBlockEnd="base">
-          <s-grid gridTemplateColumns="1fr 140px" gap="base">
+          <s-grid gridTemplateColumns="1fr 140px 110px" gap="base" alignItems="end">
             <s-text-field
               name="q"
               label="Buscar por título, handle, SKU o hreflang ID"
               defaultValue={q}
-              onChange={(event) => submit(event.currentTarget.form)}
             ></s-text-field>
             <s-select
               name="pageSize"
@@ -217,6 +216,7 @@ export default function Dashboard() {
                 </s-option>
               ))}
             </s-select>
+            <s-button type="submit">Buscar</s-button>
           </s-grid>
           </s-box>
           <input type="hidden" name="page" value="1" />
