@@ -1,4 +1,5 @@
 import db from "../db.server";
+import { unauthenticated } from "../shopify.server";
 import { getStoreByShopDomain, totalStoreCount } from "../config/stores.server";
 import {
   buildResourceGid,
@@ -301,12 +302,33 @@ export async function rescanAllPendingGroups() {
   });
 
   let matchesMade = 0;
+  let removed = 0;
   for (const item of items) {
     const current = await db.hreflangItem.findUnique({
       where: { id: item.id },
       include: { group: true },
     });
     if (!current || current.group.status === "complete") continue;
+
+    if (current.group.resourceType === "product") {
+      const { admin } = await unauthenticated.admin(current.shopDomain);
+      const numericId = current.shopifyGid.split("/").pop();
+      const details = await fetchResourceDetails(admin, "product", numericId);
+
+      if (!details) {
+        // Ya no existe en Shopify pero seguía en nuestra base de datos.
+        await removeItemAndCleanupGroup(current, "item_deleted_on_rescan", { storeId: current.storeId });
+        removed++;
+        continue;
+      }
+      if (details.status === "DRAFT") {
+        await removeItemAndCleanupGroup(current, "item_unpublished_draft_on_rescan", {
+          storeId: current.storeId,
+        });
+        removed++;
+        continue;
+      }
+    }
 
     const candidate = await findMatchCandidate(current.group.resourceType, current.storeId, {
       sku: current.sku,
@@ -321,5 +343,5 @@ export async function rescanAllPendingGroups() {
     matchesMade++;
   }
 
-  return matchesMade;
+  return { matchesMade, removed };
 }

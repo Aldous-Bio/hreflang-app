@@ -102,8 +102,8 @@ export const action = async ({ request }) => {
   }
 
   if (intent === "rescan") {
-    const matchesMade = await rescanAllPendingGroups();
-    return { rescanned: true, matchesMade };
+    const { matchesMade, removed } = await rescanAllPendingGroups();
+    return { rescanned: true, matchesMade, removed };
   }
 
   return null;
@@ -143,7 +143,10 @@ export default function Dashboard() {
             </s-button>
           </rescanFetcher.Form>
           {rescanFetcher.data?.rescanned && (
-            <s-text>{rescanFetcher.data.matchesMade} coincidencias nuevas encontradas.</s-text>
+            <s-text>
+              {rescanFetcher.data.matchesMade} coincidencias nuevas, {rescanFetcher.data.removed} borradores/borrados
+              retirados.
+            </s-text>
           )}
         </s-stack>
         <s-paragraph>
@@ -184,7 +187,7 @@ export default function Dashboard() {
 
       <s-section heading="Recent groups">
         <Form method="get" onSubmit={(event) => event.preventDefault()}>
-          <s-grid gridTemplateColumns="85% 15%" gap="base">
+          <s-grid gridTemplateColumns="1fr 140px" gap="base">
             <s-text-field
               name="q"
               label="Buscar por título, handle, SKU o hreflang ID"
