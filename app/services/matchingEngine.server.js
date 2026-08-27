@@ -132,9 +132,10 @@ async function recomputeGroupStatus(groupId) {
 
 async function pushMetafieldsForGroup(group) {
   for (const item of group.items) {
-    const otherUrls = group.items
-      .filter((other) => other.id !== item.id)
-      .map((other) => other.url);
+    const otherItems = group.items.filter((other) => other.id !== item.id);
+    // Sin pareja todavía: no tocar custom.href_lang, para no vaciar un valor
+    // ya existente (asignado a mano o por otro sistema).
+    const otherUrls = otherItems.length === 0 ? null : otherItems.map((other) => other.url);
     await setHreflangMetafields(item.shopDomain, item.shopifyGid, group.hreflangId, otherUrls);
   }
 }

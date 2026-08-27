@@ -4,8 +4,31 @@ const HREFLANG_ID_KEY = "href_lang_group_id";
 const HREFLANG_URLS_KEY = "href_lang";
 const NAMESPACE = "custom";
 
+// Si `urls` es null, no se toca custom.href_lang en absoluto — evita vaciar un
+// valor ya existente (de otro sistema, o asignado a mano) cuando el grupo
+// todavía no tiene ninguna pareja confirmada en otra tienda.
 export async function setHreflangMetafields(shopDomain, resourceGid, hreflangId, urls) {
   const { admin } = await unauthenticated.admin(shopDomain);
+
+  const metafields = [
+    {
+      ownerId: resourceGid,
+      namespace: NAMESPACE,
+      key: HREFLANG_ID_KEY,
+      type: "single_line_text_field",
+      value: hreflangId,
+    },
+  ];
+
+  if (urls !== null) {
+    metafields.push({
+      ownerId: resourceGid,
+      namespace: NAMESPACE,
+      key: HREFLANG_URLS_KEY,
+      type: "list.single_line_text_field",
+      value: JSON.stringify(urls),
+    });
+  }
 
   const response = await admin.graphql(
     `#graphql
@@ -17,26 +40,7 @@ export async function setHreflangMetafields(shopDomain, resourceGid, hreflangId,
           }
         }
       }`,
-    {
-      variables: {
-        metafields: [
-          {
-            ownerId: resourceGid,
-            namespace: NAMESPACE,
-            key: HREFLANG_ID_KEY,
-            type: "single_line_text_field",
-            value: hreflangId,
-          },
-          {
-            ownerId: resourceGid,
-            namespace: NAMESPACE,
-            key: HREFLANG_URLS_KEY,
-            type: "list.single_line_text_field",
-            value: JSON.stringify(urls),
-          },
-        ],
-      },
-    },
+    { variables: { metafields } },
   );
 
   const json = await response.json();
