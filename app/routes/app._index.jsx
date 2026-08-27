@@ -197,6 +197,7 @@ export default function Dashboard() {
 
       <s-section heading="Recent groups">
         <Form method="get" onSubmit={(event) => event.preventDefault()}>
+          <s-box paddingBlockEnd="base">
           <s-grid gridTemplateColumns="1fr 140px" gap="base">
             <s-text-field
               name="q"
@@ -217,6 +218,7 @@ export default function Dashboard() {
               ))}
             </s-select>
           </s-grid>
+          </s-box>
           <input type="hidden" name="page" value="1" />
         </Form>
 
@@ -279,7 +281,7 @@ export default function Dashboard() {
             <s-text tone="subdued">
               Mostrando {(page - 1) * pageSize + 1} a {Math.min(page * pageSize, totalCount)} de {totalCount}
             </s-text>
-            <s-stack direction="inline" gap="tight" alignItems="center">
+            <s-stack direction="inline" gap="base" alignItems="center">
               {page > 1 ? (
                 <>
                   <s-link href={pageHref(1)}>&laquo;</s-link>
