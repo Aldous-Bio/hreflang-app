@@ -196,7 +196,7 @@ export default function Dashboard() {
       </s-section>
 
       <s-section heading="Recent groups">
-        <Form method="get" onSubmit={(event) => event.preventDefault()}>
+        <Form method="get">
           <s-box paddingBlockEnd="base">
           <s-grid gridTemplateColumns="1fr 140px" gap="base">
             <s-text-field
