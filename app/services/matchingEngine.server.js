@@ -97,12 +97,17 @@ async function resolveGroup({ resourceType, storeId, details, existingItem }) {
     if (group) return { group, matched: false };
   }
 
-  const candidate = await findMatchCandidate(resourceType, storeId, details);
-  if (candidate) {
-    const group = await db.hreflangGroup.findUnique({
-      where: { id: candidate.item.groupId },
-    });
-    return { group, matched: true, criteria: candidate.criteria, confidence: candidate.confidence };
+  // Las colecciones no tienen SKU — el único criterio posible es la similitud
+  // de handle, que entre idiomas no es fiable. Nunca se auto-enlazan solas,
+  // solo se sugieren en Pending Review para aprobación manual.
+  if (resourceType !== "collection") {
+    const candidate = await findMatchCandidate(resourceType, storeId, details);
+    if (candidate) {
+      const group = await db.hreflangGroup.findUnique({
+        where: { id: candidate.item.groupId },
+      });
+      return { group, matched: true, criteria: candidate.criteria, confidence: candidate.confidence };
+    }
   }
 
   const group = await createOrphanGroup(resourceType);
@@ -329,6 +334,8 @@ export async function rescanAllPendingGroups() {
         continue;
       }
     }
+
+    if (current.group.resourceType === "collection") continue; // nunca auto-enlazar, solo sugerir
 
     const candidate = await findMatchCandidate(current.group.resourceType, current.storeId, {
       sku: current.sku,

@@ -38,7 +38,12 @@ export const loader = async ({ request }) => {
       }
     }
 
-    if (best && bestScore >= REVIEW_THRESHOLD && bestScore < AUTO_MATCH_THRESHOLD) {
+    // Las colecciones nunca se auto-enlazan (no tienen SKU), así que aquí se
+    // sugieren sin límite superior de confianza — a diferencia de productos,
+    // donde >=80% ya se habría enlazado solo y no hace falta mostrarlo aquí.
+    const upperBoundOk = group.resourceType === "collection" || bestScore < AUTO_MATCH_THRESHOLD;
+
+    if (best && bestScore >= REVIEW_THRESHOLD && upperBoundOk) {
       suggestions.push({
         group,
         candidate: best,
