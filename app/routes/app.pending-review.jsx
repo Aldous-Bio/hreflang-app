@@ -4,6 +4,20 @@ import db from "../db.server";
 import { attachItemToGroup } from "../services/matchingEngine.server";
 import { AUTO_MATCH_THRESHOLD, REVIEW_THRESHOLD, handleSimilarity } from "../utils/similarity.server";
 
+const ADMIN_PATH_BY_RESOURCE_TYPE = {
+  product: "products",
+  collection: "collections",
+  page: "pages",
+  article: "articles",
+};
+
+function adminEditUrl(item, resourceType) {
+  const numericId = item.shopifyGid.split("/").pop();
+  const path = ADMIN_PATH_BY_RESOURCE_TYPE[resourceType];
+  if (!path) return item.url;
+  return `https://${item.shopDomain}/admin/${path}/${numericId}`;
+}
+
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
@@ -95,10 +109,21 @@ export default function PendingReview() {
                     {group.hreflangId} ({group.resourceType})
                   </s-table-cell>
                   <s-table-cell>
-                    {group.items.map((item) => `${item.storeId}: ${item.title}`).join(" / ")}
+                    {group.items.map((item, index) => (
+                      <span key={item.id}>
+                        {index > 0 && " / "}
+                        {item.storeId}:{" "}
+                        <s-link href={adminEditUrl(item, group.resourceType)} target="_blank">
+                          {item.title}
+                        </s-link>
+                      </span>
+                    ))}
                   </s-table-cell>
                   <s-table-cell>
-                    {candidate.storeId}: {candidate.title}
+                    {candidate.storeId}:{" "}
+                    <s-link href={adminEditUrl(candidate, group.resourceType)} target="_blank">
+                      {candidate.title}
+                    </s-link>
                   </s-table-cell>
                   <s-table-cell>{confidence}%</s-table-cell>
                   <s-table-cell>
