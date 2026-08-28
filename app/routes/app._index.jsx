@@ -44,14 +44,14 @@ export const loader = async ({ request }) => {
 
   const url = new URL(request.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
-  const type = url.searchParams.get("type")?.trim() ?? "";
+  const type = url.searchParams.get("type")?.trim() || "all";
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(url.searchParams.get("pageSize")))
     ? Number(url.searchParams.get("pageSize"))
     : DEFAULT_PAGE_SIZE;
   const requestedPage = Number(url.searchParams.get("page")) || 1;
 
   const where = {
-    ...(type ? { resourceType: type } : {}),
+    ...(type !== "all" ? { resourceType: type } : {}),
     ...(q
       ? {
           OR: [
@@ -239,7 +239,7 @@ export default function Dashboard() {
               defaultValue={q}
             ></s-text-field>
             <s-select name="type" label="Tipo" defaultValue={type}>
-              <s-option value="">Todos</s-option>
+              <s-option value="all">Todos</s-option>
               <s-option value="product">product</s-option>
               <s-option value="collection">collection</s-option>
             </s-select>
