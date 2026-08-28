@@ -2,7 +2,7 @@ import { useFetcher, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { attachItemToGroup } from "../services/matchingEngine.server";
-import { AUTO_MATCH_THRESHOLD, REVIEW_THRESHOLD, handleSimilarity } from "../utils/similarity.server";
+import { REVIEW_THRESHOLD, handleSimilarity } from "../utils/similarity.server";
 
 const ADMIN_PATH_BY_RESOURCE_TYPE = {
   product: "products",
@@ -29,7 +29,13 @@ export const loader = async ({ request }) => {
 
   const suggestions = [];
 
-  for (const group of incompleteGroups) {
+  // Solo colecciones: los productos se identifican por SKU (matchingEngine),
+  // que es un dato real e independiente del idioma. El handle es solo texto
+  // — dos productos distintos ("packs" con nombres parecidos en cada idioma)
+  // pueden coincidir por casualidad sin ser el mismo, así que no se usa para
+  // sugerir productos. Sin SKU compartido, un producto simplemente no tiene
+  // pareja, y eso es correcto: no forzamos nada.
+  for (const group of incompleteGroups.filter((group) => group.resourceType === "collection")) {
     const groupStoreIds = new Set(group.items.map((item) => item.storeId));
 
     const candidates = await db.hreflangItem.findMany({
@@ -52,12 +58,7 @@ export const loader = async ({ request }) => {
       }
     }
 
-    // Las colecciones nunca se auto-enlazan (no tienen SKU), así que aquí se
-    // sugieren sin límite superior de confianza — a diferencia de productos,
-    // donde >=80% ya se habría enlazado solo y no hace falta mostrarlo aquí.
-    const upperBoundOk = group.resourceType === "collection" || bestScore < AUTO_MATCH_THRESHOLD;
-
-    if (best && bestScore >= REVIEW_THRESHOLD && upperBoundOk) {
+    if (best && bestScore >= REVIEW_THRESHOLD) {
       suggestions.push({
         group,
         candidate: best,
@@ -92,7 +93,11 @@ export default function PendingReview() {
     <s-page heading="Pending review">
       <s-section heading="Suggested matches">
         {suggestions.length === 0 ? (
-          <s-paragraph>No suggested matches right now. High-confidence matches (handle similarity 80%+, or identical SKU) are linked automatically.</s-paragraph>
+          <s-paragraph>
+            No suggested matches right now. Products only auto-link on an identical SKU — no suggestions are
+            shown for products, since a text-based guess could pair two unrelated products by mistake.
+            Collections (no SKU) show handle-similarity suggestions here for manual approval.
+          </s-paragraph>
         ) : (
           <s-table>
             <s-table-header-row>

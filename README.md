@@ -28,10 +28,9 @@ Esta app elimina el paso manual: escucha los webhooks de las 4 tiendas en tiempo
 Cada vez que se crea, actualiza o borra un producto o colección en cualquiera de las 4 tiendas, la app:
 
 1. **Registra el recurso** en su base de datos (tabla `HreflangItem`), asociado a un "grupo" hreflang (`HreflangGroup`).
-2. **Busca una pareja** en las otras tiendas usando estos criterios, por orden de prioridad:
-   - **SKU idéntico** (solo productos) → confianza 95%, se enlaza automáticamente.
-   - **Handle muy similar** (≥80%) → confianza 75%, se enlaza automáticamente.
-   - **Handle moderadamente similar** (55–80%) → no se enlaza solo, aparece como sugerencia en la página "Pending review" para aprobación manual.
+2. **Busca una pareja** en las otras tiendas:
+   - **Productos**: solo por **SKU idéntico** → confianza 95%, se enlaza automáticamente. El SKU es un dato real e independiente del idioma; el handle/nombre no se usa como criterio (ni para auto-enlazar ni para sugerir), porque dos productos distintos pueden llamarse casi igual en dos idiomas sin ser el mismo — sin SKU compartido, el producto simplemente se queda huérfano.
+   - **Colecciones**: no tienen SKU, así que el único criterio posible es la similitud del handle — y por eso **nunca se auto-enlazan**, solo aparecen como sugerencia en "Pending review" (≥55% de similitud) para aprobación manual.
    - Si el recurso ya tiene un `custom.href_lang_group_id` (asignado por la propia app en una ejecución anterior), la app respeta ese ID y añade el recurso a ese mismo grupo en vez de crear uno nuevo.
 3. **Actualiza los metafields** `custom.href_lang_group_id` y `custom.href_lang` en todas las tiendas del grupo, en cada tienda con las URLs de las otras.
 4. **Registra el estado del grupo**: `pending_siblings` (huérfano, solo 1 tienda), `partial` (2–3 tiendas) o `complete` (las 4 tiendas).

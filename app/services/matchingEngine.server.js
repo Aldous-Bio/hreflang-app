@@ -6,7 +6,6 @@ import {
   fetchResourceDetails,
   setHreflangMetafields,
 } from "./shopifyResource.server";
-import { AUTO_MATCH_THRESHOLD, handleSimilarity } from "../utils/similarity.server";
 import { isMatchingEnabled } from "./settings.server";
 
 function statusForCount(count) {
@@ -37,44 +36,23 @@ async function createOrphanGroup(resourceType) {
   });
 }
 
+// Solo se usa para productos (resolveGroup y rescanAllPendingGroups excluyen
+// colecciones antes de llamar aquí). El SKU es el único identificador real e
+// independiente del idioma — si no coincide, no se inventa una pareja por
+// parecido de texto (dos "packs" distintos pueden llamarse casi igual sin
+// ser el mismo producto). Sin SKU compartido, el producto se queda huérfano.
 async function findMatchCandidate(resourceType, storeId, details) {
-  if (details.sku) {
-    const bySku = await db.hreflangItem.findFirst({
-      where: {
-        storeId: { not: storeId },
-        sku: details.sku,
-        group: { resourceType, items: { none: { storeId } } },
-      },
-    });
-    if (bySku) return { item: bySku, criteria: "sku", confidence: 95 };
-  }
+  if (!details.sku) return null;
 
-  const candidates = await db.hreflangItem.findMany({
+  const bySku = await db.hreflangItem.findFirst({
     where: {
       storeId: { not: storeId },
+      sku: details.sku,
       group: { resourceType, items: { none: { storeId } } },
     },
   });
 
-  let best = null;
-  let bestScore = 0;
-  for (const candidate of candidates) {
-    const score = handleSimilarity(candidate.handle, details.handle);
-    if (score > bestScore) {
-      bestScore = score;
-      best = candidate;
-    }
-  }
-
-  if (best && bestScore >= AUTO_MATCH_THRESHOLD) {
-    return {
-      item: best,
-      criteria: "handle_similarity",
-      confidence: Math.round(bestScore * 100),
-    };
-  }
-
-  return null;
+  return bySku ? { item: bySku, criteria: "sku", confidence: 95 } : null;
 }
 
 // Resolves (and creates if needed) the group a resource event belongs to, following:
