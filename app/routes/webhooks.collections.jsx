@@ -3,6 +3,7 @@ import { handleResourceEvent } from "../services/matchingEngine.server";
 
 export const action = async ({ request }) => {
   const { shop, topic, payload, admin } = await authenticate.webhook(request);
+  console.log(`[webhooks.collections] topic=${topic} shop=${shop} admin=${admin ? "yes" : "no"} id=${payload?.id}`);
 
   const action =
     topic === "COLLECTIONS_CREATE"
