@@ -204,12 +204,16 @@ function StoreLinkField({ store, resourceType, link }) {
 
                   {results.map((result) => (
                     <s-clickable key={result.gid} onClick={() => selectResult(result)}>
-                      <s-stack direction="inline" gap="tight" alignItems="center">
-                        {result.image && <s-thumbnail src={result.image} alt={result.title} size="small"></s-thumbnail>}
+                      <s-grid gridTemplateColumns="auto 1fr" gap="tight" alignItems="center">
+                        {result.image ? (
+                          <s-thumbnail src={result.image} alt={result.title} size="small"></s-thumbnail>
+                        ) : (
+                          <s-box></s-box>
+                        )}
                         <s-text>
                           {result.title} ({result.handle})
                         </s-text>
-                      </s-stack>
+                      </s-grid>
                     </s-clickable>
                   ))}
                 </s-stack>
