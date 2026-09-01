@@ -204,7 +204,7 @@ function StoreLinkField({ store, resourceType, link }) {
 
                   {results.map((result) => (
                     <s-clickable key={result.gid} onClick={() => selectResult(result)}>
-                      <s-box padding="base">
+                      <s-box padding="tight">
                         <s-grid gridTemplateColumns="auto 1fr" gap="base" alignItems="center">
                           {result.image ? (
                             <s-thumbnail src={result.image} alt={result.title} size="small"></s-thumbnail>
