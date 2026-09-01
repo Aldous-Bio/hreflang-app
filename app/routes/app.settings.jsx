@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import {
-  listStores,
-  createStore,
-  updateStore,
-  deleteStore,
-  reorderStores,
-} from "../services/stores.server";
+import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -41,15 +35,6 @@ export const action = async ({ request }) => {
 
     if (intent === "deleteStore") {
       await deleteStore(Number(formData.get("id")));
-      return { ok: true };
-    }
-
-    if (intent === "reorderStores") {
-      const orderedIds = formData
-        .get("order")
-        .split(",")
-        .map(Number);
-      await reorderStores(orderedIds);
       return { ok: true };
     }
   } catch (error) {
@@ -136,34 +121,11 @@ export default function Settings() {
   const { stores } = useLoaderData();
   const [editingStore, setEditingStore] = useState(null);
   const [modalKey, setModalKey] = useState(0);
-  const [orderedStores, setOrderedStores] = useState(stores);
   const deleteFetcher = useFetcher();
-  const reorderFetcher = useFetcher();
-  const dragIndex = useRef(null);
-
-  useEffect(() => {
-    setOrderedStores(stores);
-  }, [stores]);
 
   function openModal(store) {
     setEditingStore(store);
     setModalKey((key) => key + 1);
-  }
-
-  function handleDrop(targetIndex) {
-    const sourceIndex = dragIndex.current;
-    dragIndex.current = null;
-    if (sourceIndex === null || sourceIndex === targetIndex) return;
-
-    const reordered = [...orderedStores];
-    const [moved] = reordered.splice(sourceIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
-    setOrderedStores(reordered);
-
-    reorderFetcher.submit(
-      { intent: "reorderStores", order: reordered.map((store) => store.id).join(",") },
-      { method: "post" },
-    );
   }
 
   return (
@@ -174,12 +136,11 @@ export default function Settings() {
           Añadir tienda
         </s-button>
 
-        {orderedStores.length === 0 ? (
+        {stores.length === 0 ? (
           <s-paragraph>No hay tiendas configuradas todavía.</s-paragraph>
         ) : (
           <s-table>
             <s-table-header-row>
-              <s-table-header></s-table-header>
               <s-table-header>ID interno</s-table-header>
               <s-table-header>Dominio</s-table-header>
               <s-table-header>Nombre</s-table-header>
@@ -188,27 +149,8 @@ export default function Settings() {
               <s-table-header>Acciones</s-table-header>
             </s-table-header-row>
             <s-table-body>
-              {orderedStores.map((store, index) => (
-                <s-table-row
-                  key={store.id}
-                  draggable
-                  onDragStart={(event) => {
-                    dragIndex.current = index;
-                    event.dataTransfer.effectAllowed = "move";
-                    event.dataTransfer.setData("text/plain", String(store.id));
-                  }}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    handleDrop(index);
-                  }}
-                >
-                  <s-table-cell>
-                    <s-icon type="drag-handle" color="subdued"></s-icon>
-                  </s-table-cell>
+              {stores.map((store) => (
+                <s-table-row key={store.id}>
                   <s-table-cell>{store.storeId}</s-table-cell>
                   <s-table-cell>{store.shopDomain}</s-table-cell>
                   <s-table-cell>{store.label}</s-table-cell>

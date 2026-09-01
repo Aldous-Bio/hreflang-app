@@ -40,7 +40,6 @@ model Store {
   label      String
   locale     String
   publicUrl  String
-  position   Int      @default(0)
   createdAt  DateTime @default(now())
   links      HreflangLink[]
 }
