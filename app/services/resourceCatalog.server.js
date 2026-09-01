@@ -65,6 +65,15 @@ function escapeQueryTerm(term) {
   return term.replace(/["\\]/g, "");
 }
 
+// Traduce el error críptico de Shopify cuando la tienda no tiene la app
+// instalada/autenticada todavía (nunca se abrió desde su propio admin).
+function friendlyErrorMessage(store, error) {
+  if (error.message?.includes("Could not find a session")) {
+    return `${store.label}: la app todavía no está instalada/autenticada en esta tienda. Ábrela desde el admin de ${store.shopDomain} para crear la sesión.`;
+  }
+  return error.message;
+}
+
 function extractImage(resourceType, node) {
   if (resourceType === "product") return node.featuredImage?.url ?? null;
   if (resourceType === "collection" || resourceType === "article") return node.image?.url ?? null;
@@ -97,7 +106,7 @@ export async function searchResources(store, resourceType, term) {
     const nodes = json?.data?.[ROOT_FIELD[resourceType]]?.nodes ?? [];
     return { results: nodes.map((node) => toResult(resourceType, node, store)) };
   } catch (error) {
-    return { error: error.message };
+    return { error: friendlyErrorMessage(store, error) };
   }
 }
 
@@ -143,6 +152,6 @@ export async function resolveResourceByUrl(store, resourceType, url) {
     if (!node) return { error: "No se encontró ningún recurso con esa URL en esta tienda." };
     return { result: toResult(resourceType, node, store) };
   } catch (error) {
-    return { error: error.message };
+    return { error: friendlyErrorMessage(store, error) };
   }
 }
