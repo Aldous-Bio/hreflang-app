@@ -286,49 +286,57 @@ export async function rescanAllPendingGroups() {
 
   let matchesMade = 0;
   let removed = 0;
+  let failed = 0;
   for (const item of items) {
-    const current = await db.hreflangItem.findUnique({
-      where: { id: item.id },
-      include: { group: true },
-    });
-    if (!current || current.group.status === "complete") continue;
+    try {
+      const current = await db.hreflangItem.findUnique({
+        where: { id: item.id },
+        include: { group: true },
+      });
+      if (!current || current.group.status === "complete") continue;
 
-    if (current.group.resourceType === "product") {
-      const { admin } = await unauthenticated.admin(current.shopDomain);
-      const numericId = current.shopifyGid.split("/").pop();
-      const details = await fetchResourceDetails(admin, "product", numericId);
+      if (current.group.resourceType === "product") {
+        const { admin } = await unauthenticated.admin(current.shopDomain);
+        const numericId = current.shopifyGid.split("/").pop();
+        const details = await fetchResourceDetails(admin, "product", numericId);
 
-      if (!details) {
-        // Ya no existe en Shopify pero seguía en nuestra base de datos.
-        await removeItemAndCleanupGroup(current, "item_deleted_on_rescan", { storeId: current.storeId });
-        removed++;
-        continue;
+        if (!details) {
+          // Ya no existe en Shopify pero seguía en nuestra base de datos.
+          await removeItemAndCleanupGroup(current, "item_deleted_on_rescan", { storeId: current.storeId });
+          removed++;
+          continue;
+        }
+        if (details.status === "DRAFT") {
+          await removeItemAndCleanupGroup(current, "item_unpublished_draft_on_rescan", {
+            storeId: current.storeId,
+          });
+          removed++;
+          continue;
+        }
       }
-      if (details.status === "DRAFT") {
-        await removeItemAndCleanupGroup(current, "item_unpublished_draft_on_rescan", {
-          storeId: current.storeId,
-        });
-        removed++;
-        continue;
-      }
+
+      if (current.group.resourceType === "collection") continue; // nunca auto-enlazar, solo sugerir
+
+      const candidate = await findMatchCandidate(current.group.resourceType, current.storeId, {
+        sku: current.sku,
+        handle: current.handle,
+      });
+      if (!candidate) continue;
+
+      await attachItemToGroup(current.id, candidate.item.groupId, {
+        criteria: candidate.criteria,
+        confidence: candidate.confidence,
+      });
+      matchesMade++;
+    } catch (error) {
+      // Un fallo con un item (p. ej. un metacampo mal tipado en alguna
+      // tienda) no debe abortar el re-scan entero de los demás.
+      console.log(`[rescanAllPendingGroups] fallo con item ${item.id}: ${error.message}`);
+      failed++;
     }
-
-    if (current.group.resourceType === "collection") continue; // nunca auto-enlazar, solo sugerir
-
-    const candidate = await findMatchCandidate(current.group.resourceType, current.storeId, {
-      sku: current.sku,
-      handle: current.handle,
-    });
-    if (!candidate) continue;
-
-    await attachItemToGroup(current.id, candidate.item.groupId, {
-      criteria: candidate.criteria,
-      confidence: candidate.confidence,
-    });
-    matchesMade++;
   }
 
-  return { matchesMade, removed };
+  return { matchesMade, removed, failed };
 }
 
 // SOLO PARA PRUEBAS: agrupa por el valor del campo legado custom.href_lang_id

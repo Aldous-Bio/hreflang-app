@@ -111,20 +111,24 @@ export const action = async ({ request }) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  if (intent === "toggle") {
-    const enabled = await isMatchingEnabled();
-    await setMatchingEnabled(!enabled);
-    return { toggled: true };
-  }
+  try {
+    if (intent === "toggle") {
+      const enabled = await isMatchingEnabled();
+      await setMatchingEnabled(!enabled);
+      return { toggled: true };
+    }
 
-  if (intent === "rescan") {
-    const { matchesMade, removed } = await rescanAllPendingGroups();
-    return { rescanned: true, matchesMade, removed };
-  }
+    if (intent === "rescan") {
+      const { matchesMade, removed, failed } = await rescanAllPendingGroups();
+      return { rescanned: true, matchesMade, removed, failed };
+    }
 
-  if (intent === "legacyImport") {
-    const { groupsProcessed, itemsLinked } = await runLegacyImport();
-    return { legacyImported: true, groupsProcessed, itemsLinked };
+    if (intent === "legacyImport") {
+      const { groupsProcessed, itemsLinked, failed } = await runLegacyImport();
+      return { legacyImported: true, groupsProcessed, itemsLinked, failed };
+    }
+  } catch (error) {
+    return { error: error.message };
   }
 
   return null;
@@ -166,9 +170,10 @@ export default function Dashboard() {
           {rescanFetcher.data?.rescanned && (
             <s-text>
               {rescanFetcher.data.matchesMade} coincidencias nuevas, {rescanFetcher.data.removed} borradores
-              retirados.
+              retirados{rescanFetcher.data.failed ? `, ${rescanFetcher.data.failed} fallidos` : ""}.
             </s-text>
           )}
+          {rescanFetcher.data?.error && <s-text tone="critical">Error: {rescanFetcher.data.error}</s-text>}
         </s-stack>
         <s-paragraph>
           &ldquo;Apagar&rdquo; pausa el matching automático por webhooks (nada se crea ni se escribe, pero los
@@ -188,8 +193,12 @@ export default function Dashboard() {
           {legacyImportFetcher.data?.legacyImported && (
             <s-text>
               {legacyImportFetcher.data.groupsProcessed} grupos procesados,{" "}
-              {legacyImportFetcher.data.itemsLinked} recursos enlazados.
+              {legacyImportFetcher.data.itemsLinked} recursos enlazados
+              {legacyImportFetcher.data.failed ? `, ${legacyImportFetcher.data.failed} fallidos` : ""}.
             </s-text>
+          )}
+          {legacyImportFetcher.data?.error && (
+            <s-text tone="critical">Error: {legacyImportFetcher.data.error}</s-text>
           )}
         </s-stack>
         <s-paragraph>

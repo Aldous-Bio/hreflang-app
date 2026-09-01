@@ -16,13 +16,17 @@ export const action = async ({ request }) => {
     return new Response();
   }
 
-  await handleResourceEvent({
-    resourceType: "collection",
-    action,
-    shopDomain: shop,
-    admin,
-    numericId: payload.id,
-  });
+  try {
+    await handleResourceEvent({
+      resourceType: "collection",
+      action,
+      shopDomain: shop,
+      admin,
+      numericId: payload.id,
+    });
+  } catch (error) {
+    console.log(`[webhooks.collections] error procesando id=${payload?.id}: ${error.message}`);
+  }
 
   return new Response();
 };

@@ -13,13 +13,19 @@ export const action = async ({ request }) => {
     return new Response();
   }
 
-  await handleResourceEvent({
-    resourceType: "product",
-    action,
-    shopDomain: shop,
-    admin,
-    numericId: payload.id,
-  });
+  try {
+    await handleResourceEvent({
+      resourceType: "product",
+      action,
+      shopDomain: shop,
+      admin,
+      numericId: payload.id,
+    });
+  } catch (error) {
+    // No dejar que Shopify reintente el webhook en bucle por un fallo nuestro
+    // (p. ej. un metacampo mal tipado en alguna tienda).
+    console.log(`[webhooks.products] error procesando id=${payload?.id}: ${error.message}`);
+  }
 
   return new Response();
 };

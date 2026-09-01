@@ -45,9 +45,11 @@ export async function setHreflangMetafields(shopDomain, resourceGid, hreflangId,
 
   const json = await response.json();
   const userErrors = json?.data?.metafieldsSet?.userErrors ?? [];
-  if (userErrors.length > 0) {
+  const topLevelErrors = json?.errors;
+
+  if (userErrors.length > 0 || topLevelErrors || !json?.data?.metafieldsSet) {
     throw new Error(
-      `Failed to set hreflang metafields on ${resourceGid} (${shopDomain}): ${JSON.stringify(userErrors)}`,
+      `Failed to set hreflang metafields on ${resourceGid} (${shopDomain}): ${JSON.stringify({ userErrors, topLevelErrors, raw: json })}`,
     );
   }
 }

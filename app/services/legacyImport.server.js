@@ -101,6 +101,7 @@ export async function runLegacyImport() {
 
   let groupsProcessed = 0;
   let itemsLinked = 0;
+  let failed = 0;
 
   for (const [key, itemsData] of groups) {
     const [resourceType, legacyId] = key.split(":");
@@ -117,10 +118,17 @@ export async function runLegacyImport() {
 
     if (deduped.length < 2) continue; // no sirve de nada un "grupo" de 1 sola tienda
 
-    await importLegacyGroup(legacyId, resourceType, deduped);
-    groupsProcessed++;
-    itemsLinked += deduped.length;
+    try {
+      await importLegacyGroup(legacyId, resourceType, deduped);
+      groupsProcessed++;
+      itemsLinked += deduped.length;
+    } catch (error) {
+      // Un fallo en un grupo (p. ej. un metacampo mal tipado en una tienda)
+      // no debe abortar la importación entera de los demás.
+      console.log(`[legacyImport] fallo en ${key}: ${error.message}`);
+      failed++;
+    }
   }
 
-  return { groupsProcessed, itemsLinked };
+  return { groupsProcessed, itemsLinked, failed };
 }
