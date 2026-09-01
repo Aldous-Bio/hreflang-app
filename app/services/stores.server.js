@@ -36,3 +36,11 @@ export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl 
 export function deleteStore(id) {
   return db.store.delete({ where: { id } });
 }
+
+// Solo actualiza el campo `position` según el nuevo orden — el `id` (y por
+// tanto cualquier referencia existente desde HreflangLink) no se toca nunca.
+export function reorderStores(orderedIds) {
+  return db.$transaction(
+    orderedIds.map((id, index) => db.store.update({ where: { id }, data: { position: index } })),
+  );
+}

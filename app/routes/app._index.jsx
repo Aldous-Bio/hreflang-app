@@ -380,16 +380,14 @@ export default function PagesDashboard() {
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
+                        icon="edit"
+                        accessibilityLabel="Editar"
                         onClick={() => openModal(entry)}
-                      >
-                        Editar
-                      </s-button>
+                      ></s-button>
                       <deleteFetcher.Form method="post">
                         <input type="hidden" name="intent" value="deleteEntry" />
                         <input type="hidden" name="entryId" value={entry.id} />
-                        <s-button type="submit" tone="critical">
-                          Borrar
-                        </s-button>
+                        <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
                     </s-stack>
                   </s-table-cell>
