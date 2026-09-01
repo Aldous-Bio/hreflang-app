@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -47,6 +47,7 @@ export const action = async ({ request }) => {
 function StoreModal({ editingStore }) {
   const fetcher = useFetcher();
   const shopify = useAppBridge();
+  const formRef = useRef(null);
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.ok) {
@@ -56,7 +57,7 @@ function StoreModal({ editingStore }) {
 
   return (
     <s-modal id="store-modal" heading={editingStore ? "Editar tienda" : "Añadir tienda"}>
-      <fetcher.Form method="post" id="store-form" key={editingStore?.id ?? "new"}>
+      <fetcher.Form method="post" id="store-form" ref={formRef} key={editingStore?.id ?? "new"}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value={editingStore ? "updateStore" : "createStore"} />
           {editingStore && <input type="hidden" name="id" value={editingStore.id} />}
@@ -104,8 +105,7 @@ function StoreModal({ editingStore }) {
       <s-button
         slot="primary-action"
         variant="primary"
-        type="submit"
-        form="store-form"
+        onClick={() => formRef.current?.requestSubmit()}
         loading={fetcher.state !== "idle"}
       >
         Guardar

@@ -192,6 +192,7 @@ function StoreLinkField({ store, resourceType, link }) {
 function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
   const fetcher = useFetcher();
   const shopify = useAppBridge();
+  const formRef = useRef(null);
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data?.ok) {
@@ -205,7 +206,7 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
 
   return (
     <s-modal id="entry-modal" heading={editingEntry ? "Editar entrada" : "Añadir entrada"}>
-      <fetcher.Form method="post" id="entry-form" key={editingEntry?.id ?? "new"}>
+      <fetcher.Form method="post" id="entry-form" ref={formRef} key={editingEntry?.id ?? "new"}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value="saveEntry" />
           <input type="hidden" name="resourceType" value={resourceType} />
@@ -233,8 +234,7 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
       <s-button
         slot="primary-action"
         variant="primary"
-        type="submit"
-        form="entry-form"
+        onClick={() => formRef.current?.requestSubmit()}
         loading={fetcher.state !== "idle"}
       >
         Guardar
