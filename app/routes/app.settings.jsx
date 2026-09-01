@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
 
@@ -45,10 +46,17 @@ export const action = async ({ request }) => {
 
 function StoreModal({ editingStore }) {
   const fetcher = useFetcher();
+  const shopify = useAppBridge();
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.ok) {
+      shopify.modal.hide("store-modal");
+    }
+  }, [fetcher.state, fetcher.data, shopify]);
 
   return (
     <s-modal id="store-modal" heading={editingStore ? "Editar tienda" : "Añadir tienda"}>
-      <fetcher.Form method="post" key={editingStore?.id ?? "new"}>
+      <fetcher.Form method="post" id="store-form" key={editingStore?.id ?? "new"}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value={editingStore ? "updateStore" : "createStore"} />
           {editingStore && <input type="hidden" name="id" value={editingStore.id} />}
@@ -91,14 +99,20 @@ function StoreModal({ editingStore }) {
 
           {fetcher.data?.error && <s-text tone="critical">Error: {fetcher.data.error}</s-text>}
         </s-stack>
-
-        <s-button slot="primary-action" variant="primary" type="submit" loading={fetcher.state !== "idle"}>
-          Guardar
-        </s-button>
-        <s-button slot="secondary-actions" commandFor="store-modal" command="--hide">
-          Cancelar
-        </s-button>
       </fetcher.Form>
+
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        type="submit"
+        form="store-form"
+        loading={fetcher.state !== "idle"}
+      >
+        Guardar
+      </s-button>
+      <s-button slot="secondary-actions" commandFor="store-modal" command="--hide">
+        Cancelar
+      </s-button>
     </s-modal>
   );
 }
@@ -111,6 +125,7 @@ export default function Settings() {
   return (
     <s-page heading="Configuración">
       <s-section heading="Tiendas">
+       <s-stack gap="base">
         <s-button commandFor="store-modal" command="--show" onClick={() => setEditingStore(null)}>
           Añadir tienda
         </s-button>
@@ -140,7 +155,7 @@ export default function Settings() {
                     </s-link>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-stack direction="inline" gap="tight">
+                    <s-stack direction="inline" gap="base">
                       <s-button
                         commandFor="store-modal"
                         command="--show"
@@ -162,6 +177,7 @@ export default function Settings() {
             </s-table-body>
           </s-table>
         )}
+       </s-stack>
       </s-section>
 
       <StoreModal editingStore={editingStore} />

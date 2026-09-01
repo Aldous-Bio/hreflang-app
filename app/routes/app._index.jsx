@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { listStores } from "../services/stores.server";
@@ -190,6 +191,13 @@ function StoreLinkField({ store, resourceType, link }) {
 
 function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
   const fetcher = useFetcher();
+  const shopify = useAppBridge();
+
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data?.ok) {
+      shopify.modal.hide("entry-modal");
+    }
+  }, [fetcher.state, fetcher.data, shopify]);
 
   function linkForStore(storeId) {
     return editingEntry?.links.find((link) => link.storeId === storeId) ?? null;
@@ -197,7 +205,7 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
 
   return (
     <s-modal id="entry-modal" heading={editingEntry ? "Editar entrada" : "Añadir entrada"}>
-      <fetcher.Form method="post" key={editingEntry?.id ?? "new"}>
+      <fetcher.Form method="post" id="entry-form" key={editingEntry?.id ?? "new"}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value="saveEntry" />
           <input type="hidden" name="resourceType" value={resourceType} />
@@ -220,19 +228,20 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
 
           {fetcher.data?.error && <s-text tone="critical">Error: {fetcher.data.error}</s-text>}
         </s-stack>
-
-        <s-button
-          slot="primary-action"
-          variant="primary"
-          type="submit"
-          loading={fetcher.state !== "idle"}
-        >
-          Guardar
-        </s-button>
-        <s-button slot="secondary-actions" commandFor="entry-modal" command="--hide">
-          Cancelar
-        </s-button>
       </fetcher.Form>
+
+      <s-button
+        slot="primary-action"
+        variant="primary"
+        type="submit"
+        form="entry-form"
+        loading={fetcher.state !== "idle"}
+      >
+        Guardar
+      </s-button>
+      <s-button slot="secondary-actions" commandFor="entry-modal" command="--hide">
+        Cancelar
+      </s-button>
     </s-modal>
   );
 }
@@ -262,6 +271,7 @@ export default function PagesDashboard() {
       </s-section>
 
       <s-section heading={RESOURCE_TYPES.find((resourceType) => resourceType.value === type)?.label}>
+       <s-stack gap="base">
         <s-button
           commandFor="entry-modal"
           command="--show"
@@ -305,7 +315,7 @@ export default function PagesDashboard() {
                     );
                   })}
                   <s-table-cell>
-                    <s-stack direction="inline" gap="tight">
+                    <s-stack direction="inline" gap="base">
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
@@ -327,6 +337,7 @@ export default function PagesDashboard() {
             </s-table-body>
           </s-table>
         )}
+       </s-stack>
       </s-section>
 
       <EntryModal
