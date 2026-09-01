@@ -125,12 +125,20 @@ function StoreLinkField({ store, resourceType, link }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  function setNativeValue(element, value) {
+    element.value = value;
+    // s-url-field/s-search-field solo confirman el valor de cara al envío
+    // del formulario cuando reciben un evento "input" real; asignar .value a
+    // mano lo muestra en pantalla pero no lo deja listo para el submit.
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   function selectResult(result) {
-    urlRef.current.value = result.url;
+    setNativeValue(urlRef.current, result.url);
     gidRef.current.value = result.gid;
     handleRef.current.value = result.handle;
     titleRef.current.value = result.title;
-    searchRef.current.value = "";
+    setNativeValue(searchRef.current, "");
     setQuery("");
     setOpen(false);
   }
