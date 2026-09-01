@@ -33,50 +33,43 @@ model Session {
   refreshTokenExpires DateTime?
 }
 
-model HreflangGroup {
-  id              Int       @id @default(autoincrement())
-  hreflangId      String?   @unique
-  resourceType    String
-  status          String
-  matchCriteria   String?
-  matchConfidence Int?
-  createdAt       DateTime  @default(now())
-  firstMatchAt    DateTime?
-  completedAt     DateTime?
-  items           HreflangItem[]
-  logs            MatchingLog[]
+model Store {
+  id         Int      @id @default(autoincrement())
+  storeId    String   @unique
+  shopDomain String   @unique
+  label      String
+  locale     String
+  publicUrl  String
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  links      HreflangLink[]
 }
 
-model HreflangItem {
+model HreflangEntry {
+  id           Int      @id @default(autoincrement())
+  resourceType String
+  displayId    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  links        HreflangLink[]
+
+  @@unique([resourceType, displayId])
+}
+
+model HreflangLink {
   id         Int           @id @default(autoincrement())
-  groupId    Int
-  group      HreflangGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  storeId    String
-  shopDomain String
-  shopifyGid String
-  handle     String
+  entryId    Int
+  entry      HreflangEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  storeId    Int
+  store      Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  shopifyGid String?
+  handle     String?
+  title      String?
   url        String
-  sku        String?
-  title      String
+  source     String
+  lastError  String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  @@unique([groupId, storeId])
-  @@unique([storeId, shopifyGid])
-  @@index([sku])
-  @@index([storeId, handle])
-}
-
-model AppSetting {
-  key   String @id
-  value String
-}
-
-model MatchingLog {
-  id        Int            @id @default(autoincrement())
-  groupId   Int?
-  group     HreflangGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  action    String
-  details   Json?
-  createdAt DateTime       @default(now())
+  @@unique([entryId, storeId])
 }

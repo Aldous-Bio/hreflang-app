@@ -1,0 +1,170 @@
+import { useState } from "react";
+import { useFetcher, useLoaderData } from "react-router";
+import { authenticate } from "../shopify.server";
+import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
+
+export const loader = async ({ request }) => {
+  await authenticate.admin(request);
+  return { stores: await listStores() };
+};
+
+export const action = async ({ request }) => {
+  await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  const data = {
+    storeId: formData.get("storeId")?.trim(),
+    shopDomain: formData.get("shopDomain")?.trim(),
+    label: formData.get("label")?.trim(),
+    locale: formData.get("locale")?.trim(),
+    publicUrl: formData.get("publicUrl")?.trim(),
+  };
+
+  try {
+    if (intent === "createStore") {
+      await createStore(data);
+      return { ok: true };
+    }
+
+    if (intent === "updateStore") {
+      await updateStore(Number(formData.get("id")), data);
+      return { ok: true };
+    }
+
+    if (intent === "deleteStore") {
+      await deleteStore(Number(formData.get("id")));
+      return { ok: true };
+    }
+  } catch (error) {
+    return { error: error.message };
+  }
+
+  return null;
+};
+
+function StoreModal({ editingStore }) {
+  const fetcher = useFetcher();
+
+  return (
+    <s-modal id="store-modal" heading={editingStore ? "Editar tienda" : "Añadir tienda"}>
+      <fetcher.Form method="post" key={editingStore?.id ?? "new"}>
+        <s-stack gap="base">
+          <input type="hidden" name="intent" value={editingStore ? "updateStore" : "createStore"} />
+          {editingStore && <input type="hidden" name="id" value={editingStore.id} />}
+
+          <s-text-field
+            name="storeId"
+            label="ID interno (slug)"
+            placeholder="main-es"
+            defaultValue={editingStore?.storeId ?? ""}
+            required
+          ></s-text-field>
+          <s-text-field
+            name="shopDomain"
+            label="Dominio *.myshopify.com"
+            placeholder="mi-tienda.myshopify.com"
+            defaultValue={editingStore?.shopDomain ?? ""}
+            required
+          ></s-text-field>
+          <s-text-field
+            name="label"
+            label="Nombre"
+            placeholder="España"
+            defaultValue={editingStore?.label ?? ""}
+            required
+          ></s-text-field>
+          <s-text-field
+            name="locale"
+            label="Idioma"
+            placeholder="es"
+            defaultValue={editingStore?.locale ?? ""}
+            required
+          ></s-text-field>
+          <s-url-field
+            name="publicUrl"
+            label="URL pública"
+            placeholder="https://mitienda.com"
+            defaultValue={editingStore?.publicUrl ?? ""}
+            required
+          ></s-url-field>
+
+          {fetcher.data?.error && <s-text tone="critical">Error: {fetcher.data.error}</s-text>}
+        </s-stack>
+
+        <s-button slot="primary-action" variant="primary" type="submit" loading={fetcher.state !== "idle"}>
+          Guardar
+        </s-button>
+        <s-button slot="secondary-actions" commandFor="store-modal" command="--hide">
+          Cancelar
+        </s-button>
+      </fetcher.Form>
+    </s-modal>
+  );
+}
+
+export default function Settings() {
+  const { stores } = useLoaderData();
+  const [editingStore, setEditingStore] = useState(null);
+  const deleteFetcher = useFetcher();
+
+  return (
+    <s-page heading="Configuración">
+      <s-section heading="Tiendas">
+        <s-button commandFor="store-modal" command="--show" onClick={() => setEditingStore(null)}>
+          Añadir tienda
+        </s-button>
+
+        {stores.length === 0 ? (
+          <s-paragraph>No hay tiendas configuradas todavía.</s-paragraph>
+        ) : (
+          <s-table>
+            <s-table-header-row>
+              <s-table-header>ID interno</s-table-header>
+              <s-table-header>Dominio</s-table-header>
+              <s-table-header>Nombre</s-table-header>
+              <s-table-header>Idioma</s-table-header>
+              <s-table-header>URL pública</s-table-header>
+              <s-table-header>Acciones</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {stores.map((store) => (
+                <s-table-row key={store.id}>
+                  <s-table-cell>{store.storeId}</s-table-cell>
+                  <s-table-cell>{store.shopDomain}</s-table-cell>
+                  <s-table-cell>{store.label}</s-table-cell>
+                  <s-table-cell>{store.locale}</s-table-cell>
+                  <s-table-cell>
+                    <s-link href={store.publicUrl} target="_blank">
+                      {store.publicUrl}
+                    </s-link>
+                  </s-table-cell>
+                  <s-table-cell>
+                    <s-stack direction="inline" gap="tight">
+                      <s-button
+                        commandFor="store-modal"
+                        command="--show"
+                        onClick={() => setEditingStore(store)}
+                      >
+                        Editar
+                      </s-button>
+                      <deleteFetcher.Form method="post">
+                        <input type="hidden" name="intent" value="deleteStore" />
+                        <input type="hidden" name="id" value={store.id} />
+                        <s-button type="submit" tone="critical">
+                          Borrar
+                        </s-button>
+                      </deleteFetcher.Form>
+                    </s-stack>
+                  </s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
+        )}
+      </s-section>
+
+      <StoreModal editingStore={editingStore} />
+    </s-page>
+  );
+}
