@@ -192,11 +192,19 @@ export default function Settings() {
                 <s-table-row
                   key={store.id}
                   draggable
-                  onDragStart={() => {
+                  onDragStart={(event) => {
                     dragIndex.current = index;
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData("text/plain", String(store.id));
                   }}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => handleDrop(index)}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    handleDrop(index);
+                  }}
                 >
                   <s-table-cell>
                     <s-icon type="drag-handle" color="subdued"></s-icon>
