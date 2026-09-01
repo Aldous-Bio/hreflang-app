@@ -112,6 +112,7 @@ function StoreLinkField({ store, resourceType, link }) {
   const searchRef = useRef(null);
   const searchFetcher = useFetcher();
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!query.trim()) return undefined;
@@ -131,6 +132,7 @@ function StoreLinkField({ store, resourceType, link }) {
     titleRef.current.value = result.title;
     searchRef.current.value = "";
     setQuery("");
+    setOpen(false);
   }
 
   function clearResolution() {
@@ -160,28 +162,61 @@ function StoreLinkField({ store, resourceType, link }) {
           onInput={clearResolution}
         ></s-url-field>
 
-        <s-search-field
-          ref={searchRef}
-          label="Buscar en esta tienda"
-          placeholder="Buscar por título..."
-          onInput={(event) => setQuery(event.target.value)}
-        ></s-search-field>
+        <div style={{ position: "relative" }}>
+          <s-search-field
+            ref={searchRef}
+            label="Buscar en esta tienda"
+            placeholder="Buscar por título..."
+            onInput={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+            }}
+          ></s-search-field>
 
-        {searchError && <s-text tone="critical">{searchError}</s-text>}
+          {open && (searchFetcher.state !== "idle" || searchError || query.trim()) && (
+            <div
+              style={{
+                position: "absolute",
+                insetInlineStart: 0,
+                insetInlineEnd: 0,
+                top: "100%",
+                marginTop: "4px",
+                zIndex: 30,
+                maxHeight: "220px",
+                overflowY: "auto",
+                background: "#fff",
+                border: "1px solid #e1e1e1",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+              }}
+            >
+              <s-box padding="tight">
+                <s-stack gap="tight">
+                  {searchFetcher.state !== "idle" && <s-text tone="subdued">Buscando…</s-text>}
 
-        {results.length > 0 && (
-          <s-box padding="tight" borderWidth="base" borderRadius="base">
-            <s-stack gap="tight">
-              {results.map((result) => (
-                <s-clickable key={result.gid} onClick={() => selectResult(result)}>
-                  <s-text>
-                    {result.title} ({result.handle})
-                  </s-text>
-                </s-clickable>
-              ))}
-            </s-stack>
-          </s-box>
-        )}
+                  {searchFetcher.state === "idle" && searchError && (
+                    <s-text tone="critical">{searchError}</s-text>
+                  )}
+
+                  {searchFetcher.state === "idle" && !searchError && results.length === 0 && (
+                    <s-text tone="subdued">Sin resultados para «{query}».</s-text>
+                  )}
+
+                  {results.map((result) => (
+                    <s-clickable key={result.gid} onClick={() => selectResult(result)}>
+                      <s-stack direction="inline" gap="tight" alignItems="center">
+                        {result.image && <s-thumbnail src={result.image} alt={result.title} size="small"></s-thumbnail>}
+                        <s-text>
+                          {result.title} ({result.handle})
+                        </s-text>
+                      </s-stack>
+                    </s-clickable>
+                  ))}
+                </s-stack>
+              </s-box>
+            </div>
+          )}
+        </div>
 
         {link?.lastError && <s-text tone="critical">Error al sincronizar: {link.lastError}</s-text>}
       </s-stack>
@@ -189,7 +224,7 @@ function StoreLinkField({ store, resourceType, link }) {
   );
 }
 
-function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
+function EntryModal({ resourceType, stores, nextDisplayId, editingEntry, modalKey }) {
   const fetcher = useFetcher();
   const shopify = useAppBridge();
   const formRef = useRef(null);
@@ -206,7 +241,7 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry }) {
 
   return (
     <s-modal id="entry-modal" heading={editingEntry ? "Editar entrada" : "Añadir entrada"}>
-      <fetcher.Form method="post" id="entry-form" ref={formRef} key={editingEntry?.id ?? "new"}>
+      <fetcher.Form method="post" id="entry-form" ref={formRef} key={modalKey}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value="saveEntry" />
           <input type="hidden" name="resourceType" value={resourceType} />
@@ -250,7 +285,13 @@ export default function PagesDashboard() {
   const { stores, entries, type, nextDisplayId } = useLoaderData();
   const [searchParams] = useSearchParams();
   const [editingEntry, setEditingEntry] = useState(null);
+  const [modalKey, setModalKey] = useState(0);
   const deleteFetcher = useFetcher();
+
+  function openModal(entry) {
+    setEditingEntry(entry);
+    setModalKey((key) => key + 1);
+  }
 
   function typeHref(value) {
     const params = new URLSearchParams(searchParams);
@@ -275,7 +316,7 @@ export default function PagesDashboard() {
         <s-button
           commandFor="entry-modal"
           command="--show"
-          onClick={() => setEditingEntry(null)}
+          onClick={() => openModal(null)}
         >
           Añadir entrada
         </s-button>
@@ -319,7 +360,7 @@ export default function PagesDashboard() {
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
-                        onClick={() => setEditingEntry(entry)}
+                        onClick={() => openModal(entry)}
                       >
                         Editar
                       </s-button>
@@ -345,6 +386,7 @@ export default function PagesDashboard() {
         stores={stores}
         nextDisplayId={nextDisplayId}
         editingEntry={editingEntry}
+        modalKey={modalKey}
       />
     </s-page>
   );

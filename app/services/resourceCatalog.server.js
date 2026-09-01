@@ -4,13 +4,13 @@ const SEARCH_QUERIES = {
   product: `#graphql
     query SearchProducts($query: String!) {
       products(first: 10, query: $query) {
-        nodes { id handle title }
+        nodes { id handle title featuredImage { url } }
       }
     }`,
   collection: `#graphql
     query SearchCollections($query: String!) {
       collections(first: 10, query: $query) {
-        nodes { id handle title }
+        nodes { id handle title image { url } }
       }
     }`,
   page: `#graphql
@@ -28,7 +28,7 @@ const SEARCH_QUERIES = {
   article: `#graphql
     query SearchArticles($query: String!) {
       articles(first: 10, query: $query) {
-        nodes { id handle title blog { handle } }
+        nodes { id handle title blog { handle } image { url } }
       }
     }`,
 };
@@ -65,11 +65,18 @@ function escapeQueryTerm(term) {
   return term.replace(/["\\]/g, "");
 }
 
+function extractImage(resourceType, node) {
+  if (resourceType === "product") return node.featuredImage?.url ?? null;
+  if (resourceType === "collection" || resourceType === "article") return node.image?.url ?? null;
+  return null;
+}
+
 function toResult(resourceType, node, store) {
   return {
     gid: node.id,
     handle: node.handle,
     title: node.title,
+    image: extractImage(resourceType, node),
     url: `${store.publicUrl}${buildPath(resourceType, node)}`,
   };
 }

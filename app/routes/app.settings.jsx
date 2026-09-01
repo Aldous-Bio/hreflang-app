@@ -44,7 +44,7 @@ export const action = async ({ request }) => {
   return null;
 };
 
-function StoreModal({ editingStore }) {
+function StoreModal({ editingStore, modalKey }) {
   const fetcher = useFetcher();
   const shopify = useAppBridge();
   const formRef = useRef(null);
@@ -57,7 +57,7 @@ function StoreModal({ editingStore }) {
 
   return (
     <s-modal id="store-modal" heading={editingStore ? "Editar tienda" : "Añadir tienda"}>
-      <fetcher.Form method="post" id="store-form" ref={formRef} key={editingStore?.id ?? "new"}>
+      <fetcher.Form method="post" id="store-form" ref={formRef} key={modalKey}>
         <s-stack gap="base">
           <input type="hidden" name="intent" value={editingStore ? "updateStore" : "createStore"} />
           {editingStore && <input type="hidden" name="id" value={editingStore.id} />}
@@ -120,13 +120,19 @@ function StoreModal({ editingStore }) {
 export default function Settings() {
   const { stores } = useLoaderData();
   const [editingStore, setEditingStore] = useState(null);
+  const [modalKey, setModalKey] = useState(0);
   const deleteFetcher = useFetcher();
+
+  function openModal(store) {
+    setEditingStore(store);
+    setModalKey((key) => key + 1);
+  }
 
   return (
     <s-page heading="Configuración">
       <s-section heading="Tiendas">
        <s-stack gap="base">
-        <s-button commandFor="store-modal" command="--show" onClick={() => setEditingStore(null)}>
+        <s-button commandFor="store-modal" command="--show" onClick={() => openModal(null)}>
           Añadir tienda
         </s-button>
 
@@ -159,7 +165,7 @@ export default function Settings() {
                       <s-button
                         commandFor="store-modal"
                         command="--show"
-                        onClick={() => setEditingStore(store)}
+                        onClick={() => openModal(store)}
                       >
                         Editar
                       </s-button>
@@ -180,7 +186,7 @@ export default function Settings() {
        </s-stack>
       </s-section>
 
-      <StoreModal editingStore={editingStore} />
+      <StoreModal editingStore={editingStore} modalKey={modalKey} />
     </s-page>
   );
 }
