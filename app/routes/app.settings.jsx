@@ -161,7 +161,7 @@ export default function Settings() {
                     </s-link>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-stack direction="inline" gap="base">
+                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
                       <s-button
                         commandFor="store-modal"
                         command="--show"
@@ -174,7 +174,7 @@ export default function Settings() {
                         <input type="hidden" name="id" value={store.id} />
                         <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
-                    </s-stack>
+                    </div>
                   </s-table-cell>
                 </s-table-row>
               ))}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -322,13 +322,37 @@ export default function PagesDashboard() {
   return (
     <s-page heading="Hreflang · Páginas">
       <s-section>
-        <s-stack direction="inline" gap="base">
-          {RESOURCE_TYPES.map((resourceType) => (
-            <s-link key={resourceType.value} href={typeHref(resourceType.value)}>
-              {resourceType.value === type ? <s-badge>{resourceType.label}</s-badge> : resourceType.label}
-            </s-link>
-          ))}
-        </s-stack>
+        <div
+          style={{
+            display: "inline-flex",
+            gap: "2px",
+            background: "#f1f1f1",
+            borderRadius: "8px",
+            padding: "3px",
+          }}
+        >
+          {RESOURCE_TYPES.map((resourceType) => {
+            const active = resourceType.value === type;
+            return (
+              <Link
+                key={resourceType.value}
+                to={typeHref(resourceType.value)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  color: active ? "#1a1a1a" : "#5c5c5c",
+                  background: active ? "#ffffff" : "transparent",
+                  boxShadow: active ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                }}
+              >
+                {resourceType.label}
+              </Link>
+            );
+          })}
+        </div>
       </s-section>
 
       <s-section heading={RESOURCE_TYPES.find((resourceType) => resourceType.value === type)?.label}>
@@ -376,7 +400,7 @@ export default function PagesDashboard() {
                     );
                   })}
                   <s-table-cell>
-                    <s-stack direction="inline" gap="base">
+                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
@@ -389,7 +413,7 @@ export default function PagesDashboard() {
                         <input type="hidden" name="entryId" value={entry.id} />
                         <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
-                    </s-stack>
+                    </div>
                   </s-table-cell>
                 </s-table-row>
               ))}
