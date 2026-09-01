@@ -83,7 +83,13 @@ export const action = async ({ request }) => {
         if (!linkData.shopifyGid) {
           const resolved = await resolveResourceByUrl(store, resourceType, rawUrl);
           if (resolved.result) {
-            linkData = { ...linkData, ...resolved.result };
+            linkData = {
+              ...linkData,
+              url: resolved.result.url,
+              shopifyGid: resolved.result.gid,
+              handle: resolved.result.handle,
+              title: resolved.result.title,
+            };
           }
         }
 

@@ -99,8 +99,11 @@ export async function searchResources(store, resourceType, term) {
   try {
     const { admin } = await unauthenticated.admin(store.shopDomain);
     const safeTerm = escapeQueryTerm(trimmed);
+    // Los productos en borrador/archivados no tienen sentido como destino de
+    // hreflang — solo se buscan los publicados/activos.
+    const statusFilter = resourceType === "product" ? " status:active" : "";
     const response = await admin.graphql(SEARCH_QUERIES[resourceType], {
-      variables: { query: `title:*${safeTerm}*` },
+      variables: { query: `title:*${safeTerm}*${statusFilter}` },
     });
     const json = await response.json();
     const nodes = json?.data?.[ROOT_FIELD[resourceType]]?.nodes ?? [];

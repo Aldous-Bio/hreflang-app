@@ -8,6 +8,10 @@ export function getStoreById(id) {
   return db.store.findUnique({ where: { id } });
 }
 
+function normalizePublicUrl(publicUrl) {
+  return publicUrl.replace(/\/+$/, "");
+}
+
 export async function createStore({ storeId, shopDomain, label, locale, publicUrl }) {
   const maxPosition = await db.store.aggregate({ _max: { position: true } });
   return db.store.create({
@@ -16,7 +20,7 @@ export async function createStore({ storeId, shopDomain, label, locale, publicUr
       shopDomain,
       label,
       locale,
-      publicUrl,
+      publicUrl: normalizePublicUrl(publicUrl),
       position: (maxPosition._max.position ?? -1) + 1,
     },
   });
@@ -25,7 +29,7 @@ export async function createStore({ storeId, shopDomain, label, locale, publicUr
 export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }) {
   return db.store.update({
     where: { id },
-    data: { storeId, shopDomain, label, locale, publicUrl },
+    data: { storeId, shopDomain, label, locale, publicUrl: normalizePublicUrl(publicUrl) },
   });
 }
 
