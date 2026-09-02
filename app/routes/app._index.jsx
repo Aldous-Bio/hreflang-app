@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
+import { Form, Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -15,26 +15,77 @@ const RESOURCE_TYPES = [
   { value: "article", label: "Artículos de blog" },
 ];
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_WINDOW_SIZE = 5;
+
+function pageWindow(current, total) {
+  const half = Math.floor(PAGE_WINDOW_SIZE / 2);
+  let start = Math.max(1, current - half);
+  const end = Math.min(total, start + PAGE_WINDOW_SIZE - 1);
+  start = Math.max(1, end - PAGE_WINDOW_SIZE + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
 
   const url = new URL(request.url);
   const type = url.searchParams.get("type") || "product";
+  const q = url.searchParams.get("q")?.trim() ?? "";
+  const pageSize = PAGE_SIZE_OPTIONS.includes(Number(url.searchParams.get("pageSize")))
+    ? Number(url.searchParams.get("pageSize"))
+    : DEFAULT_PAGE_SIZE;
+  const requestedPage = Number(url.searchParams.get("page")) || 1;
 
-  const [stores, entries, maxDisplayId] = await Promise.all([
+  const where = {
+    resourceType: type,
+    ...(q
+      ? {
+          OR: [
+            ...(Number.isNaN(Number(q)) ? [] : [{ displayId: Number(q) }]),
+            {
+              links: {
+                some: {
+                  OR: [
+                    { title: { contains: q, mode: "insensitive" } },
+                    { handle: { contains: q, mode: "insensitive" } },
+                    { url: { contains: q, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const [stores, totalCount, maxDisplayId] = await Promise.all([
     listStores(),
-    db.hreflangEntry.findMany({
-      where: { resourceType: type },
-      include: { links: { include: { store: true } } },
-      orderBy: { displayId: "asc" },
-    }),
+    db.hreflangEntry.count({ where }),
     db.hreflangEntry.aggregate({ where: { resourceType: type }, _max: { displayId: true } }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(Math.max(requestedPage, 1), totalPages);
+
+  const entries = await db.hreflangEntry.findMany({
+    where,
+    include: { links: { include: { store: true } } },
+    orderBy: { displayId: "asc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
 
   return {
     stores,
     entries,
     type,
+    q,
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
     nextDisplayId: (maxDisplayId._max.displayId ?? 0) + 1,
   };
 };
@@ -302,7 +353,7 @@ function EntryModal({ resourceType, stores, nextDisplayId, editingEntry, modalKe
 }
 
 export default function PagesDashboard() {
-  const { stores, entries, type, nextDisplayId } = useLoaderData();
+  const { stores, entries, type, q, page, pageSize, totalCount, totalPages, nextDisplayId } = useLoaderData();
   const [searchParams] = useSearchParams();
   const [editingEntry, setEditingEntry] = useState(null);
   const [modalKey, setModalKey] = useState(0);
@@ -316,6 +367,14 @@ export default function PagesDashboard() {
   function typeHref(value) {
     const params = new URLSearchParams(searchParams);
     params.set("type", value);
+    params.delete("q");
+    params.delete("page");
+    return `?${params.toString()}`;
+  }
+
+  function pageHref(targetPage) {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", String(targetPage));
     return `?${params.toString()}`;
   }
 
@@ -355,6 +414,14 @@ export default function PagesDashboard() {
 
         <div style={{ padding: "16px" }}>
        <s-stack gap="base">
+        <Form method="get">
+          <input type="hidden" name="type" value={type} />
+          <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="end">
+            <s-text-field name="q" label="Buscar por ID, título, handle o URL" defaultValue={q}></s-text-field>
+            <s-button type="submit">Buscar</s-button>
+          </s-grid>
+        </Form>
+
         <s-button
           commandFor="entry-modal"
           command="--show"
@@ -417,6 +484,49 @@ export default function PagesDashboard() {
               ))}
             </s-table-body>
           </s-table>
+        )}
+
+        {totalCount > 0 && (
+          <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+            <s-text tone="subdued">
+              Mostrando {(page - 1) * pageSize + 1} a {Math.min(page * pageSize, totalCount)} de {totalCount}
+            </s-text>
+            <s-stack direction="inline" gap="base" alignItems="center">
+              {page > 1 ? (
+                <>
+                  <s-link href={pageHref(1)}>&laquo;</s-link>
+                  <s-link href={pageHref(page - 1)}>&lsaquo;</s-link>
+                </>
+              ) : (
+                <>
+                  <s-text tone="subdued">&laquo;</s-text>
+                  <s-text tone="subdued">&lsaquo;</s-text>
+                </>
+              )}
+
+              {pageWindow(page, totalPages).map((pageNumber) =>
+                pageNumber === page ? (
+                  <s-badge key={pageNumber}>{pageNumber}</s-badge>
+                ) : (
+                  <s-link key={pageNumber} href={pageHref(pageNumber)}>
+                    {pageNumber}
+                  </s-link>
+                ),
+              )}
+
+              {page < totalPages ? (
+                <>
+                  <s-link href={pageHref(page + 1)}>&rsaquo;</s-link>
+                  <s-link href={pageHref(totalPages)}>&raquo;</s-link>
+                </>
+              ) : (
+                <>
+                  <s-text tone="subdued">&rsaquo;</s-text>
+                  <s-text tone="subdued">&raquo;</s-text>
+                </>
+              )}
+            </s-stack>
+          </s-stack>
         )}
        </s-stack>
         </div>
