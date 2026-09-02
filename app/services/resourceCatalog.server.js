@@ -44,7 +44,7 @@ const ROOT_FIELD = {
 // Query GraphQL para buscar por handle exacto (usado al resolver una URL pegada a mano).
 const HANDLE_QUERIES = SEARCH_QUERIES;
 
-function buildPath(resourceType, node) {
+export function buildPath(resourceType, node) {
   switch (resourceType) {
     case "product":
       return `/products/${node.handle}`;

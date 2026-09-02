@@ -45,14 +45,19 @@ model Store {
 }
 
 model HreflangEntry {
-  id           Int      @id @default(autoincrement())
-  resourceType String
-  displayId    Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  links        HreflangLink[]
+  id             Int      @id @default(autoincrement())
+  resourceType   String
+  displayId      Int
+  // Valor de custom.href_lang_id que originó esta entrada, solo cuando viene
+  // de la importación automática desde el sistema legado — permite reejecutar
+  // esa importación sin duplicar grupos ya creados.
+  legacySourceId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  links          HreflangLink[]
 
   @@unique([resourceType, displayId])
+  @@unique([resourceType, legacySourceId])
 }
 
 model HreflangLink {

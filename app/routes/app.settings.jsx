@@ -3,6 +3,7 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
+import { runLegacyImport } from "../services/legacyImport.server";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -36,6 +37,11 @@ export const action = async ({ request }) => {
     if (intent === "deleteStore") {
       await deleteStore(Number(formData.get("id")));
       return { ok: true };
+    }
+
+    if (intent === "legacyImport") {
+      const result = await runLegacyImport();
+      return { legacyImported: true, ...result };
     }
   } catch (error) {
     return { error: error.message };
@@ -184,7 +190,46 @@ export default function Settings() {
        </s-stack>
       </s-section>
 
+      <s-section heading="Importar desde el sistema legado">
+        <LegacyImportSection />
+      </s-section>
+
       <StoreModal editingStore={editingStore} modalKey={modalKey} />
     </s-page>
+  );
+}
+
+function LegacyImportSection() {
+  const fetcher = useFetcher();
+  const result = fetcher.data;
+
+  return (
+    <s-stack gap="base">
+      <s-paragraph>
+        Recorre productos, colecciones, páginas, blogs y artículos de todas las tiendas configuradas buscando
+        el metacampo legado <code>custom.href_lang_id</code>, y crea/actualiza entradas agrupando lo que
+        comparta el mismo valor. No modifica <code>custom.href_lang</code> ni ningún otro metacampo — solo
+        guarda registros en la base de datos de la app. Se puede lanzar varias veces sin duplicar lo ya
+        importado. Puede tardar un rato según el tamaño del catálogo.
+      </s-paragraph>
+
+      <fetcher.Form method="post">
+        <input type="hidden" name="intent" value="legacyImport" />
+        <s-button type="submit" loading={fetcher.state !== "idle"}>
+          Importar ahora
+        </s-button>
+      </fetcher.Form>
+
+      {result?.legacyImported && (
+        <s-text>
+          {result.groupsCreated} grupos nuevos, {result.groupsUpdated} actualizados, {result.linksLinked}{" "}
+          enlaces guardados
+          {result.skippedConflicts ? `, ${result.skippedConflicts} omitidos por estar ya enlazados` : ""}
+          {result.failed ? `, ${result.failed} fallidos` : ""}.
+        </s-text>
+      )}
+
+      {result?.error && <s-text tone="critical">Error: {result.error}</s-text>}
+    </s-stack>
   );
 }
