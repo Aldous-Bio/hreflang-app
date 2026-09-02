@@ -321,14 +321,14 @@ export default function PagesDashboard() {
 
   return (
     <s-page heading="Hreflang · Páginas">
-      <s-section>
+      <s-section padding="none">
         <div
           style={{
-            display: "inline-flex",
-            gap: "2px",
-            background: "#f1f1f1",
-            borderRadius: "8px",
-            padding: "3px",
+            display: "flex",
+            gap: "4px",
+            background: "#ffffff",
+            borderBottom: "1px solid #e1e3e5",
+            padding: "12px 16px",
           }}
         >
           {RESOURCE_TYPES.map((resourceType) => {
@@ -344,8 +344,7 @@ export default function PagesDashboard() {
                   fontWeight: 500,
                   textDecoration: "none",
                   color: active ? "#1a1a1a" : "#5c5c5c",
-                  background: active ? "#ffffff" : "transparent",
-                  boxShadow: active ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                  background: active ? "#f1f1f1" : "transparent",
                 }}
               >
                 {resourceType.label}
@@ -353,9 +352,8 @@ export default function PagesDashboard() {
             );
           })}
         </div>
-      </s-section>
 
-      <s-section heading={RESOURCE_TYPES.find((resourceType) => resourceType.value === type)?.label}>
+        <div style={{ padding: "16px" }}>
        <s-stack gap="base">
         <s-button
           commandFor="entry-modal"
@@ -421,6 +419,7 @@ export default function PagesDashboard() {
           </s-table>
         )}
        </s-stack>
+        </div>
       </s-section>
 
       <EntryModal
