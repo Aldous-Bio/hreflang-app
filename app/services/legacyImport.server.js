@@ -155,10 +155,32 @@ export async function runLegacyImport() {
   const existingEntries = await db.hreflangEntry.findMany({ where: { legacySourceId: { not: null } } });
   const entryByKey = new Map(existingEntries.map((entry) => [`${entry.resourceType}:${entry.legacySourceId}`, entry]));
 
-  const nextDisplayId = {};
+  // Al crear una entrada nueva, se intenta usar el propio valor de
+  // custom.href_lang_id como ID (si es un número entero y no está ya
+  // ocupado por otra entrada) para conservar la numeración del sistema
+  // legado. Si no es numérico o ya está en uso, se cae al siguiente ID
+  // libre, como antes.
+  const usedDisplayIds = {};
+  const nextFallbackDisplayId = {};
   for (const resourceType of RESOURCE_TYPES) {
-    const max = await db.hreflangEntry.aggregate({ where: { resourceType }, _max: { displayId: true } });
-    nextDisplayId[resourceType] = (max._max.displayId ?? 0) + 1;
+    const existing = await db.hreflangEntry.findMany({ where: { resourceType }, select: { displayId: true } });
+    usedDisplayIds[resourceType] = new Set(existing.map((e) => e.displayId));
+    nextFallbackDisplayId[resourceType] = existing.reduce((max, e) => Math.max(max, e.displayId), 0) + 1;
+  }
+
+  function pickDisplayId(resourceType, legacyId) {
+    const used = usedDisplayIds[resourceType];
+    const parsed = Number(legacyId);
+    if (Number.isInteger(parsed) && parsed > 0 && !used.has(parsed)) {
+      used.add(parsed);
+      return parsed;
+    }
+
+    let candidate = nextFallbackDisplayId[resourceType];
+    while (used.has(candidate)) candidate++;
+    used.add(candidate);
+    nextFallbackDisplayId[resourceType] = candidate + 1;
+    return candidate;
   }
 
   let groupsCreated = 0;
@@ -190,7 +212,7 @@ export async function runLegacyImport() {
       const entry = existingEntry
         ? existingEntry
         : await db.hreflangEntry.create({
-            data: { resourceType, legacySourceId: legacyId, displayId: nextDisplayId[resourceType]++ },
+            data: { resourceType, legacySourceId: legacyId, displayId: pickDisplayId(resourceType, legacyId) },
           });
 
       if (existingEntry) groupsUpdated++;
