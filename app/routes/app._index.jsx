@@ -69,13 +69,21 @@ export const loader = async ({ request }) => {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const page = Math.min(Math.max(requestedPage, 1), totalPages);
 
-  const entries = await db.hreflangEntry.findMany({
+  const rawEntries = await db.hreflangEntry.findMany({
     where,
     include: { links: { include: { store: true } } },
     orderBy: { displayId: "asc" },
     skip: (page - 1) * pageSize,
     take: pageSize,
   });
+
+  const entries = rawEntries.map((entry) => ({
+    ...entry,
+    links: entry.links.map((link) => ({
+      ...link,
+      adminUrl: buildAdminUrl(entry.resourceType, link.store.shopDomain, link.shopifyGid),
+    })),
+  }));
 
   return {
     stores,
@@ -452,13 +460,10 @@ export default function PagesDashboard() {
                   <s-table-cell>{entry.displayId}</s-table-cell>
                   {stores.map((store) => {
                     const link = entry.links.find((candidate) => candidate.storeId === store.id);
-                    const adminUrl = link
-                      ? buildAdminUrl(entry.resourceType, store.shopDomain, link.shopifyGid)
-                      : null;
                     return (
                       <s-table-cell key={store.id}>
                         {link ? (
-                          <s-link href={adminUrl ?? link.url} target="_blank">
+                          <s-link href={link.adminUrl ?? link.url} target="_blank">
                             {link.title ?? link.handle ?? link.url}
                           </s-link>
                         ) : (
