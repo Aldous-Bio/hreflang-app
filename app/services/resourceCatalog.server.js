@@ -61,6 +61,24 @@ export function buildPath(resourceType, node) {
   }
 }
 
+const ADMIN_PATH = {
+  product: "products",
+  collection: "collections",
+  page: "pages",
+  blog: "blogs",
+  article: "articles",
+};
+
+// Construye el link a la página de configuración del recurso en el admin de
+// Shopify (en vez de la URL pública de la tienda) a partir del GID guardado.
+export function buildAdminUrl(resourceType, shopDomain, shopifyGid) {
+  const path = ADMIN_PATH[resourceType];
+  if (!path || !shopifyGid) return null;
+  const numericId = shopifyGid.split("/").pop();
+  if (!numericId) return null;
+  return `https://${shopDomain}/admin/${path}/${numericId}`;
+}
+
 function escapeQueryTerm(term) {
   return term.replace(/["\\]/g, "");
 }

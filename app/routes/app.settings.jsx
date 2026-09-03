@@ -3,7 +3,7 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
-import { runLegacyImport } from "../services/legacyImport.server";
+import { syncAllEntryMetafields } from "../services/hreflangMetafield.server";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -39,9 +39,9 @@ export const action = async ({ request }) => {
       return { ok: true };
     }
 
-    if (intent === "legacyImport") {
-      const result = await runLegacyImport();
-      return { legacyImported: true, ...result };
+    if (intent === "syncAllHreflang") {
+      const result = await syncAllEntryMetafields();
+      return { hreflangSynced: true, ...result };
     }
   } catch (error) {
     return { error: error.message };
@@ -190,8 +190,8 @@ export default function Settings() {
        </s-stack>
       </s-section>
 
-      <s-section heading="Importar desde el sistema legado">
-        <LegacyImportSection />
+      <s-section heading="Sincronizar hreflang">
+        <SyncAllHreflangSection />
       </s-section>
 
       <StoreModal editingStore={editingStore} modalKey={modalKey} />
@@ -199,33 +199,29 @@ export default function Settings() {
   );
 }
 
-function LegacyImportSection() {
+function SyncAllHreflangSection() {
   const fetcher = useFetcher();
   const result = fetcher.data;
 
   return (
     <s-stack gap="base">
       <s-paragraph>
-        Recorre productos, colecciones, páginas, blogs y artículos de todas las tiendas configuradas buscando
-        el metacampo legado <code>custom.href_lang_id</code>, y crea/actualiza entradas agrupando lo que
-        comparta el mismo valor. No modifica <code>custom.href_lang</code> ni ningún otro metacampo — solo
-        guarda registros en la base de datos de la app. Se puede lanzar varias veces sin duplicar lo ya
-        importado. Puede tardar un rato según el tamaño del catálogo.
+        Vuelve a escribir el metacampo <code>custom.href_lang</code> en todos los recursos enlazados de todas
+        las entradas, a partir de lo guardado en esta app. Útil si alguien ha editado o borrado el metacampo a
+        mano directamente en Shopify. No crea ni borra entradas ni enlaces. Puede tardar un rato según el
+        número de entradas.
       </s-paragraph>
 
       <fetcher.Form method="post">
-        <input type="hidden" name="intent" value="legacyImport" />
+        <input type="hidden" name="intent" value="syncAllHreflang" />
         <s-button type="submit" loading={fetcher.state !== "idle"}>
-          Importar ahora
+          Sincronizar ahora
         </s-button>
       </fetcher.Form>
 
-      {result?.legacyImported && (
+      {result?.hreflangSynced && (
         <s-text>
-          {result.groupsCreated} grupos nuevos, {result.groupsUpdated} actualizados, {result.linksLinked}{" "}
-          enlaces guardados
-          {result.skippedConflicts ? `, ${result.skippedConflicts} omitidos por estar ya enlazados` : ""}
-          {result.failed ? `, ${result.failed} fallidos` : ""}.
+          {result.synced} entradas sincronizadas{result.failed ? `, ${result.failed} fallidas` : ""}.
         </s-text>
       )}
 

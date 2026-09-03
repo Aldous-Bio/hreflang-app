@@ -4,7 +4,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { listStores } from "../services/stores.server";
-import { resolveResourceByUrl } from "../services/resourceCatalog.server";
+import { resolveResourceByUrl, buildAdminUrl } from "../services/resourceCatalog.server";
 import { syncEntryMetafields } from "../services/hreflangMetafield.server";
 
 const RESOURCE_TYPES = [
@@ -452,10 +452,13 @@ export default function PagesDashboard() {
                   <s-table-cell>{entry.displayId}</s-table-cell>
                   {stores.map((store) => {
                     const link = entry.links.find((candidate) => candidate.storeId === store.id);
+                    const adminUrl = link
+                      ? buildAdminUrl(entry.resourceType, store.shopDomain, link.shopifyGid)
+                      : null;
                     return (
                       <s-table-cell key={store.id}>
                         {link ? (
-                          <s-link href={link.url} target="_blank">
+                          <s-link href={adminUrl ?? link.url} target="_blank">
                             {link.title ?? link.handle ?? link.url}
                           </s-link>
                         ) : (

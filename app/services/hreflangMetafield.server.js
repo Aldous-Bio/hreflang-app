@@ -65,3 +65,25 @@ export async function syncEntryMetafields(entryId) {
     }
   }
 }
+
+// Recorre todas las entradas y reescribe custom.href_lang en cada una, por si
+// algún valor se editó a mano en Shopify y se descuadró con lo que hay en la
+// base de datos de la app. No crea ni borra entradas ni enlaces, solo
+// resincroniza el metacampo a partir de lo ya guardado.
+export async function syncAllEntryMetafields() {
+  const entries = await db.hreflangEntry.findMany({ select: { id: true } });
+
+  let synced = 0;
+  let failed = 0;
+
+  for (const entry of entries) {
+    try {
+      await syncEntryMetafields(entry.id);
+      synced++;
+    } catch (error) {
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+}
