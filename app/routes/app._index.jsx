@@ -19,6 +19,18 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_WINDOW_SIZE = 5;
 
+function getNextAvailableDisplayId(existingDisplayIds) {
+  let next = 1;
+  for (const { displayId } of existingDisplayIds) {
+    if (displayId === next) {
+      next += 1;
+    } else if (displayId > next) {
+      break;
+    }
+  }
+  return next;
+}
+
 function pageWindow(current, total) {
   const half = Math.floor(PAGE_WINDOW_SIZE / 2);
   let start = Math.max(1, current - half);
@@ -60,10 +72,14 @@ export const loader = async ({ request }) => {
       : {}),
   };
 
-  const [stores, totalCount, maxDisplayId] = await Promise.all([
+  const [stores, totalCount, existingDisplayIds] = await Promise.all([
     listStores(),
     db.hreflangEntry.count({ where }),
-    db.hreflangEntry.aggregate({ where: { resourceType: type }, _max: { displayId: true } }),
+    db.hreflangEntry.findMany({
+      where: { resourceType: type },
+      select: { displayId: true },
+      orderBy: { displayId: "asc" },
+    }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -94,7 +110,7 @@ export const loader = async ({ request }) => {
     pageSize,
     totalCount,
     totalPages,
-    nextDisplayId: (maxDisplayId._max.displayId ?? 0) + 1,
+    nextDisplayId: getNextAvailableDisplayId(existingDisplayIds),
   };
 };
 
