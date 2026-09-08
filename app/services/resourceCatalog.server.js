@@ -83,6 +83,37 @@ function escapeQueryTerm(term) {
   return term.replace(/["\\]/g, "");
 }
 
+// Para cada vocal (o "n") sin tilde, genera también la variante con tilde,
+// una a la vez, para que buscar "curcuma" encuentre "Cúrcuma" aunque el
+// usuario no haya escrito la tilde (y viceversa, ya que partimos de la
+// versión sin acentos del término).
+const ACCENT_VARIANTS = {
+  a: "á",
+  e: "é",
+  i: "í",
+  o: "ó",
+  u: "úü",
+  n: "ñ",
+};
+
+function stripAccents(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function buildAccentInsensitiveQuery(field, term) {
+  const base = stripAccents(term.toLowerCase());
+  const variants = new Set([base]);
+  for (let i = 0; i < base.length; i++) {
+    const accented = ACCENT_VARIANTS[base[i]];
+    if (!accented) continue;
+    for (const char of accented) {
+      variants.add(base.slice(0, i) + char + base.slice(i + 1));
+    }
+  }
+  const clauses = [...variants].map((variant) => `${field}:*${variant}*`);
+  return clauses.length > 1 ? `(${clauses.join(" OR ")})` : clauses[0];
+}
+
 // Traduce el error críptico de Shopify cuando la tienda no tiene la app
 // instalada/autenticada todavía (nunca se abrió desde su propio admin).
 function friendlyErrorMessage(store, error) {
@@ -117,11 +148,9 @@ export async function searchResources(store, resourceType, term) {
   try {
     const { admin } = await unauthenticated.admin(store.shopDomain);
     const safeTerm = escapeQueryTerm(trimmed);
-    // Los productos en borrador/archivados no tienen sentido como destino de
-    // hreflang — solo se buscan los publicados/activos.
-    const statusFilter = resourceType === "product" ? " status:active" : "";
+    const titleQuery = buildAccentInsensitiveQuery("title", safeTerm);
     const response = await admin.graphql(SEARCH_QUERIES[resourceType], {
-      variables: { query: `title:*${safeTerm}*${statusFilter}` },
+      variables: { query: titleQuery },
     });
     const json = await response.json();
     const nodes = json?.data?.[ROOT_FIELD[resourceType]]?.nodes ?? [];
