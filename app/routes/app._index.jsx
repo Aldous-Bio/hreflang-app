@@ -489,7 +489,8 @@ export default function PagesDashboard() {
                     );
                   })}
                   <s-table-cell>
-                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
+                    {/* <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}> */}
+                    <s-stack direction="inline" gap="base">
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
@@ -502,7 +503,8 @@ export default function PagesDashboard() {
                         <input type="hidden" name="entryId" value={entry.id} />
                         <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
-                    </div>
+                    </s-stack>
+                    {/* </div> */}
                   </s-table-cell>
                 </s-table-row>
               ))}
