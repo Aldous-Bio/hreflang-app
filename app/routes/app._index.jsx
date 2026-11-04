@@ -479,9 +479,11 @@ export default function PagesDashboard() {
                     return (
                       <s-table-cell key={store.id}>
                         {link ? (
-                          <s-link href={link.adminUrl ?? link.url} target="_blank">
-                            {link.title ?? link.handle ?? link.url}
-                          </s-link>
+                          <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                            <s-link href={link.adminUrl ?? link.url} target="_blank">
+                              {link.title ?? link.handle ?? link.url}
+                            </s-link>
+                          </span>
                         ) : (
                           "—"
                         )}
@@ -489,8 +491,7 @@ export default function PagesDashboard() {
                     );
                   })}
                   <s-table-cell>
-                    {/* <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}> */}
-                    <s-stack direction="inline" gap="base">
+                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
                       <s-button
                         commandFor="entry-modal"
                         command="--show"
@@ -503,8 +504,7 @@ export default function PagesDashboard() {
                         <input type="hidden" name="entryId" value={entry.id} />
                         <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
-                    </s-stack>
-                    {/* </div> */}
+                    </div>
                   </s-table-cell>
                 </s-table-row>
               ))}

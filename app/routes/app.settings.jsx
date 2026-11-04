@@ -162,12 +162,14 @@ export default function Settings() {
                   <s-table-cell>{store.label}</s-table-cell>
                   <s-table-cell>{store.locale}</s-table-cell>
                   <s-table-cell>
-                    <s-link href={store.publicUrl} target="_blank">
-                      {store.publicUrl}
-                    </s-link>
+                    <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                      <s-link href={store.publicUrl} target="_blank">
+                        {store.publicUrl}
+                      </s-link>
+                    </span>
                   </s-table-cell>
                   <s-table-cell>
-                    <s-stack direction="inline" gap="base">
+                    <div style={{ display: "flex", flexWrap: "nowrap", gap: "8px" }}>
                       <s-button
                         commandFor="store-modal"
                         command="--show"
@@ -180,7 +182,7 @@ export default function Settings() {
                         <input type="hidden" name="id" value={store.id} />
                         <s-button type="submit" tone="critical" icon="delete" accessibilityLabel="Borrar"></s-button>
                       </deleteFetcher.Form>
-                    </s-stack>
+                    </div>
                   </s-table-cell>
                 </s-table-row>
               ))}
