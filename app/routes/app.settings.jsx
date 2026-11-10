@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { requireAuthorizedShop } from "../shopify.server";
-import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
+import { listStoresForShop, createStore, updateStore, deleteStore } from "../services/stores.server";
 import { syncAllEntryMetafields } from "../services/hreflangMetafield.server";
 
 export const loader = async ({ request }) => {
-  await requireAuthorizedShop(request);
-  return { stores: await listStores() };
+  const { session } = await requireAuthorizedShop(request);
+  return { stores: await listStoresForShop(session.shop) };
 };
 
 export const action = async ({ request }) => {

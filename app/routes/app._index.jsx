@@ -3,7 +3,7 @@ import { Form, Link, useFetcher, useLoaderData, useSearchParams } from "react-ro
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { requireAuthorizedShop } from "../shopify.server";
 import db from "../db.server";
-import { listStores } from "../services/stores.server";
+import { listStoresForShop } from "../services/stores.server";
 import { resolveResourceByUrl, buildAdminUrl } from "../services/resourceCatalog.server";
 import { syncEntryMetafields } from "../services/hreflangMetafield.server";
 
@@ -40,7 +40,7 @@ function pageWindow(current, total) {
 }
 
 export const loader = async ({ request }) => {
-  await requireAuthorizedShop(request);
+  const { session } = await requireAuthorizedShop(request);
 
   const url = new URL(request.url);
   const type = url.searchParams.get("type") || "product";
@@ -73,7 +73,7 @@ export const loader = async ({ request }) => {
   };
 
   const [stores, totalCount, existingDisplayIds] = await Promise.all([
-    listStores(),
+    listStoresForShop(session.shop),
     db.hreflangEntry.count({ where }),
     db.hreflangEntry.findMany({
       where: { resourceType: type },
@@ -115,7 +115,7 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session } = await requireAuthorizedShop(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -139,7 +139,7 @@ export const action = async ({ request }) => {
       const resourceType = formData.get("resourceType");
       const displayId = Number(formData.get("displayId"));
       const entryIdRaw = formData.get("entryId");
-      const stores = await listStores();
+      const stores = await listStoresForShop(session.shop);
 
       const entry = entryIdRaw
         ? await db.hreflangEntry.update({ where: { id: Number(entryIdRaw) }, data: { displayId } })

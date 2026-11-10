@@ -14,8 +14,23 @@ export function listStores() {
   return db.store.findMany({ orderBy: { id: "asc" } });
 }
 
+export function listStoresForShop(shopDomain) {
+  return db.store.findMany({ 
+    where: { shopDomain },
+    orderBy: { id: "asc" } 
+  });
+}
+
 export function getStoreById(id) {
   return db.store.findUnique({ where: { id } });
+}
+
+export async function getStoreByIdForShop(id, shopDomain) {
+  const store = await db.store.findUnique({ where: { id } });
+  if (!store || store.shopDomain !== shopDomain) {
+    return null;
+  }
+  return store;
 }
 
 function normalizePublicUrl(publicUrl) {
