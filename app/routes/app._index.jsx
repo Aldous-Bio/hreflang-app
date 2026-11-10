@@ -52,6 +52,12 @@ export const loader = async ({ request }) => {
 
   const where = {
     resourceType: type,
+    // Filter to only entries with links belonging to the authenticated shop
+    links: {
+      some: {
+        store: { shopDomain: session.shop }
+      }
+    },
     ...(q
       ? {
           OR: [
@@ -76,7 +82,14 @@ export const loader = async ({ request }) => {
     listStoresForShop(session.shop),
     db.hreflangEntry.count({ where }),
     db.hreflangEntry.findMany({
-      where: { resourceType: type },
+      where: {
+        resourceType: type,
+        links: {
+          some: {
+            store: { shopDomain: session.shop }
+          }
+        }
+      },
       select: { displayId: true },
       orderBy: { displayId: "asc" },
     }),

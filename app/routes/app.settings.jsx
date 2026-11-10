@@ -40,7 +40,7 @@ export const action = async ({ request }) => {
     }
 
     if (intent === "syncAllHreflang") {
-      const result = await syncAllEntryMetafields();
+      const result = await syncAllEntryMetafields(session.shop);
       return { hreflangSynced: true, ...result };
     }
   } catch (error) {
