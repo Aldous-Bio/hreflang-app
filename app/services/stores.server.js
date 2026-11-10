@@ -1,5 +1,15 @@
 import db from "../db.server";
 
+function validateHttpUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function listStores() {
   return db.store.findMany({ orderBy: { id: "asc" } });
 }
@@ -13,6 +23,9 @@ function normalizePublicUrl(publicUrl) {
 }
 
 export async function createStore({ storeId, shopDomain, label, locale, publicUrl }) {
+  if (!validateHttpUrl(publicUrl)) {
+    throw new Error("La URL pública debe ser http o https");
+  }
   return db.store.create({
     data: {
       storeId,
@@ -25,6 +38,9 @@ export async function createStore({ storeId, shopDomain, label, locale, publicUr
 }
 
 export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }) {
+  if (!validateHttpUrl(publicUrl)) {
+    throw new Error("La URL pública debe ser http o https");
+  }
   return db.store.update({
     where: { id },
     data: { storeId, shopDomain, label, locale, publicUrl: normalizePublicUrl(publicUrl) },
@@ -57,7 +73,10 @@ export async function ensureStoreForShop(shopDomain, admin) {
       }`);
     const json = await response.json();
     label = json?.data?.shop?.name ?? label;
-    publicUrl = json?.data?.shop?.primaryDomain?.url ?? publicUrl;
+    const primaryUrl = json?.data?.shop?.primaryDomain?.url;
+    if (primaryUrl && validateHttpUrl(primaryUrl)) {
+      publicUrl = primaryUrl;
+    }
   } catch {
     // Si falla la consulta, seguimos con los valores por defecto derivados
     // del propio shopDomain — se pueden corregir a mano después.

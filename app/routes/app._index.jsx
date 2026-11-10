@@ -119,6 +119,16 @@ export const action = async ({ request }) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
 
+  const validateUrl = (url) => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
   try {
     if (intent === "deleteEntry") {
       await db.hreflangEntry.delete({ where: { id: Number(formData.get("entryId")) } });
@@ -144,6 +154,10 @@ export const action = async ({ request }) => {
         if (!rawUrl) {
           if (existingLink) await db.hreflangLink.delete({ where: { id: existingLink.id } });
           continue;
+        }
+
+        if (!validateUrl(rawUrl)) {
+          throw new Error(`URL inválida para ${store.label}: ${rawUrl}. Solo se aceptan URLs http o https.`);
         }
 
         const gid = formData.get(`gid__${store.storeId}`)?.trim() || null;
