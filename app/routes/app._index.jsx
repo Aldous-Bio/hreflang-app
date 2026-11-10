@@ -131,7 +131,24 @@ export const action = async ({ request }) => {
 
   try {
     if (intent === "deleteEntry") {
-      await db.hreflangEntry.delete({ where: { id: Number(formData.get("entryId")) } });
+      const entryId = Number(formData.get("entryId"));
+      const entry = await db.hreflangEntry.findUnique({
+        where: { id: entryId },
+        include: { links: { include: { store: true } } },
+      });
+      
+      if (!entry) {
+        throw new Error("Entrada no encontrada");
+      }
+      
+      // Verify all linked stores belong to the authenticated shop
+      for (const link of entry.links) {
+        if (link.store.shopDomain !== session.shop) {
+          throw new Error("No autorizado para eliminar esta entrada");
+        }
+      }
+      
+      await db.hreflangEntry.delete({ where: { id: entryId } });
       return { ok: true };
     }
 

@@ -11,7 +11,7 @@ export const loader = async ({ request }) => {
 };
 
 export const action = async ({ request }) => {
-  await requireAuthorizedShop(request);
+  const { session } = await requireAuthorizedShop(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -25,17 +25,17 @@ export const action = async ({ request }) => {
 
   try {
     if (intent === "createStore") {
-      await createStore(data);
+      await createStore(data, session.shop);
       return { ok: true };
     }
 
     if (intent === "updateStore") {
-      await updateStore(Number(formData.get("id")), data);
+      await updateStore(Number(formData.get("id")), data, session.shop);
       return { ok: true };
     }
 
     if (intent === "deleteStore") {
-      await deleteStore(Number(formData.get("id")));
+      await deleteStore(Number(formData.get("id")), session.shop);
       return { ok: true };
     }
 

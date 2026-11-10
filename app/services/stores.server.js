@@ -37,7 +37,10 @@ function normalizePublicUrl(publicUrl) {
   return publicUrl.replace(/\/+$/, "");
 }
 
-export async function createStore({ storeId, shopDomain, label, locale, publicUrl }) {
+export async function createStore({ storeId, shopDomain, label, locale, publicUrl }, authenticatedShopDomain) {
+  if (authenticatedShopDomain && shopDomain !== authenticatedShopDomain) {
+    throw new Error("Cannot create store for a different shop");
+  }
   if (!validateHttpUrl(publicUrl)) {
     throw new Error("La URL pública debe ser http o https");
   }
@@ -52,7 +55,10 @@ export async function createStore({ storeId, shopDomain, label, locale, publicUr
   });
 }
 
-export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }) {
+export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }, authenticatedShopDomain) {
+  if (authenticatedShopDomain && shopDomain !== authenticatedShopDomain) {
+    throw new Error("Cannot update store to a different shop");
+  }
   if (!validateHttpUrl(publicUrl)) {
     throw new Error("La URL pública debe ser http o https");
   }
@@ -62,7 +68,13 @@ export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl 
   });
 }
 
-export function deleteStore(id) {
+export async function deleteStore(id, authenticatedShopDomain) {
+  if (authenticatedShopDomain) {
+    const store = await db.store.findUnique({ where: { id } });
+    if (!store || store.shopDomain !== authenticatedShopDomain) {
+      throw new Error("Cannot delete store from a different shop");
+    }
+  }
   return db.store.delete({ where: { id } });
 }
 

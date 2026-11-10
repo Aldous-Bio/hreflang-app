@@ -20,11 +20,12 @@ function isShopAllowed(shopDomain) {
 }
 
 export async function requireAuthorizedShop(request) {
-  const session = await authenticate.admin(request);
-  if (!isShopAllowed(session.session.shop)) {
+  const authResult = await authenticate.admin(request);
+  const shopDomain = authResult.session?.shop;
+  if (!shopDomain || !isShopAllowed(shopDomain)) {
     throw new Response("Unauthorized shop", { status: 403 });
   }
-  return session;
+  return authResult;
 }
 
 const shopify = shopifyApp({
