@@ -1,10 +1,15 @@
-import { authenticate } from "../shopify.server";
+import { authenticate, isShopAllowed } from "../shopify.server";
 import db from "../db.server";
 
 export const action = async ({ request }) => {
     // authenticate.webhook valida el HMAC; si no es válido, responde 401 por sí solo
     const { shop, topic } = await authenticate.webhook(request);
     console.log(`Received ${topic} webhook for ${shop}`);
+
+    if (!isShopAllowed(shop)) {
+        console.warn(`Webhook from unauthorized shop: ${shop}`);
+        return new Response("Unauthorized", { status: 403 });
+    }
 
     switch (topic) {
         case "CUSTOMERS_DATA_REQUEST":

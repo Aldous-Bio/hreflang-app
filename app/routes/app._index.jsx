@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Form, Link, useFetcher, useLoaderData, useSearchParams } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { authenticate } from "../shopify.server";
+import { requireAuthorizedShop } from "../shopify.server";
 import db from "../db.server";
 import { listStores } from "../services/stores.server";
 import { resolveResourceByUrl, buildAdminUrl } from "../services/resourceCatalog.server";
@@ -40,7 +40,7 @@ function pageWindow(current, total) {
 }
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  await requireAuthorizedShop(request);
 
   const url = new URL(request.url);
   const type = url.searchParams.get("type") || "product";

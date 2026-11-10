@@ -8,6 +8,25 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import prisma from "./db.server";
 import { ensureStoreForShop } from "./services/stores.server";
 
+const ALLOWED_SHOPS = new Set([
+  "aldous-bio.myshopify.com",
+  "aldous-fr.myshopify.com",
+  "rmmxs2-qt.myshopify.com",
+  "aldous-pt.myshopify.com",
+]);
+
+function isShopAllowed(shopDomain) {
+  return ALLOWED_SHOPS.has(shopDomain);
+}
+
+export async function requireAuthorizedShop(request) {
+  const session = await authenticate.admin(request);
+  if (!isShopAllowed(session.session.shop)) {
+    throw new Response("Unauthorized shop", { status: 403 });
+  }
+  return session;
+}
+
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
@@ -22,6 +41,9 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session, admin }) => {
+      if (!isShopAllowed(session.shop)) {
+        throw new Error(`Shop ${session.shop} is not authorized to use this app`);
+      }
       await ensureStoreForShop(session.shop, admin);
     },
   },
@@ -38,3 +60,4 @@ export const unauthenticated = shopify.unauthenticated;
 export const login = shopify.login;
 export const registerWebhooks = shopify.registerWebhooks;
 export const sessionStorage = shopify.sessionStorage;
+export { isShopAllowed };
