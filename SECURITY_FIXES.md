@@ -117,7 +117,8 @@ const ALLOWED_SHOPS = new Set([
   "aldous-bio.myshopify.com",
   "aldous-fr.myshopify.com",
   "rmmxs2-qt.myshopify.com",
-  "aldous-pt.myshopify.com"
+  "aldous-pt.myshopify.com",
+  "aldousbiode.myshopify.com"
 ]);
 
 export async function requireAuthorizedShop(request) {

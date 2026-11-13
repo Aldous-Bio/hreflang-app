@@ -13,6 +13,7 @@ const ALLOWED_SHOPS = new Set([
   "aldous-fr.myshopify.com",
   "rmmxs2-qt.myshopify.com",
   "aldous-pt.myshopify.com",
+  "aldousbiode.myshopify.com"
 ]);
 
 function isShopAllowed(shopDomain) {
