@@ -1,5 +1,15 @@
 # Security Fixes Applied
 
+> **Update (2026-11-13): per-shop tenant isolation reverted.** This app is
+> intentionally shared across Aldous' own stores: every allowlisted shop must see
+> and edit the stores, entries and links of *all* countries. The per-shop filters
+> from `4df152e`, `748c441` and `ae96db3` (sections 2, 3 and the related parts of
+> "Data Layer" below) broke that and have been removed. The security boundary is
+> the shop allowlist in `app/shopify.server.js` (`requireAuthorizedShop`): only
+> listed Aldous shops can open the app, and all of them are trusted. Kept: the
+> allowlist, the `session.shop` fix, `requireAuthorizedShop` on the index action,
+> webhook fixes, scope cleanup and URL validation.
+
 ## Summary
 
 Implemented comprehensive multi-layer tenant isolation to prevent cross-shop data access and unauthorized modifications. The app restricts access to 4 Aldous-authorized domains with strict validation at every authentication, routing, and data layer.

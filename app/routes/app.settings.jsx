@@ -2,16 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { requireAuthorizedShop } from "../shopify.server";
-import { listStoresForShop, createStore, updateStore, deleteStore } from "../services/stores.server";
+import { listStores, createStore, updateStore, deleteStore } from "../services/stores.server";
 import { syncAllEntryMetafields } from "../services/hreflangMetafield.server";
 
 export const loader = async ({ request }) => {
-  const { session } = await requireAuthorizedShop(request);
-  return { stores: await listStoresForShop(session.shop) };
+  await requireAuthorizedShop(request);
+  return { stores: await listStores() };
 };
 
 export const action = async ({ request }) => {
-  const { session } = await requireAuthorizedShop(request);
+  await requireAuthorizedShop(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
@@ -25,22 +25,22 @@ export const action = async ({ request }) => {
 
   try {
     if (intent === "createStore") {
-      await createStore(data, session.shop);
+      await createStore(data);
       return { ok: true };
     }
 
     if (intent === "updateStore") {
-      await updateStore(Number(formData.get("id")), data, session.shop);
+      await updateStore(Number(formData.get("id")), data);
       return { ok: true };
     }
 
     if (intent === "deleteStore") {
-      await deleteStore(Number(formData.get("id")), session.shop);
+      await deleteStore(Number(formData.get("id")));
       return { ok: true };
     }
 
     if (intent === "syncAllHreflang") {
-      const result = await syncAllEntryMetafields(session.shop);
+      const result = await syncAllEntryMetafields();
       return { hreflangSynced: true, ...result };
     }
   } catch (error) {

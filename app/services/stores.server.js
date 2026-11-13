@@ -14,33 +14,15 @@ export function listStores() {
   return db.store.findMany({ orderBy: { id: "asc" } });
 }
 
-export function listStoresForShop(shopDomain) {
-  return db.store.findMany({ 
-    where: { shopDomain },
-    orderBy: { id: "asc" } 
-  });
-}
-
 export function getStoreById(id) {
   return db.store.findUnique({ where: { id } });
-}
-
-export async function getStoreByIdForShop(id, shopDomain) {
-  const store = await db.store.findUnique({ where: { id } });
-  if (!store || store.shopDomain !== shopDomain) {
-    return null;
-  }
-  return store;
 }
 
 function normalizePublicUrl(publicUrl) {
   return publicUrl.replace(/\/+$/, "");
 }
 
-export async function createStore({ storeId, shopDomain, label, locale, publicUrl }, authenticatedShopDomain) {
-  if (authenticatedShopDomain && shopDomain !== authenticatedShopDomain) {
-    throw new Error("Cannot create store for a different shop");
-  }
+export async function createStore({ storeId, shopDomain, label, locale, publicUrl }) {
   if (!validateHttpUrl(publicUrl)) {
     throw new Error("La URL pública debe ser http o https");
   }
@@ -55,10 +37,7 @@ export async function createStore({ storeId, shopDomain, label, locale, publicUr
   });
 }
 
-export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }, authenticatedShopDomain) {
-  if (authenticatedShopDomain && shopDomain !== authenticatedShopDomain) {
-    throw new Error("Cannot update store to a different shop");
-  }
+export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl }) {
   if (!validateHttpUrl(publicUrl)) {
     throw new Error("La URL pública debe ser http o https");
   }
@@ -68,13 +47,7 @@ export function updateStore(id, { storeId, shopDomain, label, locale, publicUrl 
   });
 }
 
-export async function deleteStore(id, authenticatedShopDomain) {
-  if (authenticatedShopDomain) {
-    const store = await db.store.findUnique({ where: { id } });
-    if (!store || store.shopDomain !== authenticatedShopDomain) {
-      throw new Error("Cannot delete store from a different shop");
-    }
-  }
+export function deleteStore(id) {
   return db.store.delete({ where: { id } });
 }
 
